@@ -1,6 +1,23 @@
 # Timeforing App
 
-A comprehensive time tracking application built with Kotlin Spring Boot API backend and modern frontend GUI in a monorepo structure.
+A comprehensive time tracking application built with Kotlin Spring Boot API backend and React TypeScript frontend in a monorepo structure.
+
+## 🚀 Quick Start
+
+### For Developers
+📋 **[Complete Developer Environment Setup Guide](DEVELOPER_SETUP.md)**
+
+### Quick Commands
+```bash
+# 1. Start database (automated setup)
+./scripts/start-database.sh
+
+# 2. Start backend
+mvn spring-boot:run
+
+# 3. Start frontend
+cd timeforing-app-gui && npm run dev
+```
 
 ## 🚀 Project Overview
 
@@ -14,9 +31,11 @@ timeforing-app/
 │   ├── main/kotlin/              # Application source code
 │   ├── main/resources/           # Configuration and migrations
 │   └── test/kotlin/              # Test suites
-├── timeforing-app-gui/           # Frontend (GUI - To be developed)
+├── timeforing-app-gui/           # Frontend (React TypeScript)
+├── scripts/                      # Database management scripts
+├── docker-compose.yml            # Oracle XE database container
+├── DEVELOPER_SETUP.md            # Complete environment setup guide
 ├── .github/                      # CI/CD workflows and project configs
-├── .vscode/                      # VS Code workspace configuration
 ├── pom.xml                       # Maven build configuration
 ├── README.md                     # This file
 └── ...config files
@@ -38,11 +57,16 @@ timeforing-app/
 - **Maven** - Dependency management and build automation
 - **SOLID Principles** - Clean architecture implementation
 
-### Frontend GUI (Planned)
-- Modern web frontend for time tracking interface
-- User-friendly dashboard and reporting
-- Real-time project and task management
-- Responsive design for desktop and mobile
+### Frontend (Implemented)
+- **React 18** - Modern React with hooks and concurrent features
+- **TypeScript** - Type-safe development with excellent IDE support  
+- **Vite** - Fast build tool and dev server
+- **Tailwind CSS** - Utility-first CSS framework
+- **Vitest** - Fast unit testing framework
+- **Component Architecture** - Modular, reusable components
+- **Dark Mode Support** - Built-in theme switching
+- **Responsive Design** - Mobile-first approach
+- **Modern Routing** - Client-side navigation
 
 ## 🏗️ Architecture
 
@@ -154,7 +178,6 @@ cd timeforing-app-gui
 
 ### VS Code Configuration
 The project includes VS Code workspace configuration with:
-- **MCP Integration**: GitHub CLI tools for project management
 - **Task Automation**: Build, test, and run tasks
 - **Debug Configuration**: Backend debugging setup
 

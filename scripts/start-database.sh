@@ -77,6 +77,20 @@ fi
 log_info "Waiting for container to be ready..."
 sleep 30  # Give Oracle time to initialize
 
+# Check if database user exists
+check_user_exists() {
+    log_info "Checking if database user exists..."
+    
+    # Try to connect directly as the user - if successful, user exists
+    if podman exec timeforing-oracle bash -c "echo 'SELECT 1 FROM dual;' | sqlplus -s timeforing_user/TimeTrack123@localhost:1521/XEPDB1" &>/dev/null; then
+        log_success "Database user already exists, skipping creation"
+        return 0
+    else
+        log_info "Database user does not exist or cannot connect, will create/setup"
+        return 1
+    fi
+}
+
 # Setup database user if needed
 setup_database_user() {
     log_info "Setting up database user..."
@@ -146,8 +160,10 @@ wait_for_oracle() {
 # Wait for Oracle to be ready first
 wait_for_oracle
 
-# Setup database user
-setup_database_user
+# Check if user exists, and create only if needed
+if ! check_user_exists; then
+    setup_database_user
+fi
 
 # Verify connection
 log_info "Verifying database connection..."

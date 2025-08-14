@@ -200,7 +200,7 @@ npm test
 ```
 
 **Verify Frontend:**
-Open browser to `http://localhost:5173` to see the React application.
+Open browser to `http://localhost:3000` to see the React application.
 
 ## 🐳 Database Management
 
@@ -386,7 +386,7 @@ lsof -i :1521
 ### Project-Specific
 - Backend API: `http://localhost:8080/swagger-ui.html` (when implemented)
 - Database Web UI: `http://localhost:5500/em` (Oracle Enterprise Manager)
-- Frontend Dev Server: `http://localhost:5173`
+- Frontend Dev Server: `http://localhost:3000`
 
 ## ✅ Environment Verification Checklist
 

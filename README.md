@@ -1,9 +1,30 @@
-# Base Spring Boot API - Kotlin
+# Timeforing App
 
-A comprehensive Spring Boot API template built with Kotlin, following SOLID principles and best practices.
+A comprehensive time tracking application built with Kotlin Spring Boot API backend and modern frontend GUI in a monorepo structure.
 
-## 🚀 Features
+## 🚀 Project Overview
 
+**Timeforing App** is a time tracking solution designed for individuals and teams to efficiently track work hours, manage projects, and generate insightful reports. The application follows modern development practices with a monorepo structure containing both backend and frontend components.
+
+## 🏗️ Repository Structure
+
+```
+timeforing-app/
+├── src/                          # Backend (Kotlin Spring Boot API)
+│   ├── main/kotlin/              # Application source code
+│   ├── main/resources/           # Configuration and migrations
+│   └── test/kotlin/              # Test suites
+├── timeforing-app-gui/           # Frontend (GUI - To be developed)
+├── .github/                      # CI/CD workflows and project configs
+├── .vscode/                      # VS Code workspace configuration
+├── pom.xml                       # Maven build configuration
+├── README.md                     # This file
+└── ...config files
+```
+
+## 🎯 Features
+
+### Backend API
 - **Kotlin** - Modern, concise language with null safety
 - **Spring Boot 3.x** - Latest Spring Boot with native compilation support
 - **Oracle Database** - Enterprise-grade database with containerized development
@@ -14,13 +35,18 @@ A comprehensive Spring Boot API template built with Kotlin, following SOLID prin
 - **Kotest** - Kotlin-native testing framework
 - **TestContainers** - Integration testing with real database
 - **JaCoCo** - Code coverage analysis and reporting
-- **Allure** - Advanced test reporting with coverage integration
 - **Maven** - Dependency management and build automation
 - **SOLID Principles** - Clean architecture implementation
 
+### Frontend GUI (Planned)
+- Modern web frontend for time tracking interface
+- User-friendly dashboard and reporting
+- Real-time project and task management
+- Responsive design for desktop and mobile
+
 ## 🏗️ Architecture
 
-### Layered Architecture Pattern
+### Backend Architecture Pattern
 ```
 API Controllers → Facades → Repositories
 ```
@@ -29,9 +55,9 @@ API Controllers → Facades → Repositories
 - **Facades**: Business logic orchestration, transaction management, and service coordination  
 - **Repositories**: Data access layer with pure SQL operations
 
-### Project Structure
+### Backend Project Structure
 ```
-src/main/kotlin/
+src/main/kotlin/com/norvaldb/api/timeforing/
 ├── controller/     # REST endpoints (@RestController)
 ├── facade/         # Business logic layer (@Service, @Transactional)
 ├── service/        # External service integrations
@@ -46,16 +72,16 @@ src/main/kotlin/
 
 | Component | Technology | Version |
 |-----------|------------|---------|
-| Language | Kotlin | 1.9.24 |
-| Framework | Spring Boot | 3.3.2 |
+| Language | Kotlin | 1.9.25 |
+| Framework | Spring Boot | 3.5.4 |
 | Build Tool | Maven | 3.9.x |
 | Database | Oracle Database | 23ai |
 | Connection Pool | HikariCP | Built-in |
-| Migration | Flyway | 10.15.2 |
-| Documentation | SpringDoc OpenAPI | 2.6.0 |
+| Migration | Flyway | 10.21.0 |
+| Documentation | SpringDoc OpenAPI | 2.7.0 |
 | Security | Spring Security OAuth2 | Built-in |
 | Testing | Kotest + MockK | 5.9.1 |
-| Containers | TestContainers | 1.19.8 |
+| Containers | TestContainers | 1.21.3 |
 
 ## 🚦 Getting Started
 
@@ -65,15 +91,18 @@ src/main/kotlin/
 - **Maven 3.6+**
 - **Docker/Podman** (for Oracle Database)
 - **Git**
+- **Node.js 18+** (for frontend development)
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/norvaldb/base-springboot-api-kotlin.git
-cd base-springboot-api-kotlin
+git clone https://github.com/norvaldb/timeforing-app.git
+cd timeforing-app
 ```
 
-### 2. Start Oracle Database (Podman)
+### 2. Backend Setup
+
+#### Start Oracle Database (Podman)
 
 ```bash
 # Pull Oracle XE image
@@ -91,7 +120,7 @@ podman run -d \
 podman logs -f oracle-xe
 ```
 
-### 3. Configure Environment Variables
+#### Configure Environment Variables
 
 ```bash
 export DB_USERNAME=dev_user
@@ -100,7 +129,50 @@ export DB_SCHEMA=DEV_SCHEMA
 export JWT_ISSUER_URI=https://your-oauth2-provider.com
 ```
 
-### 4. Run Database Migrations
+#### Build and Run Backend
+
+```bash
+# Install dependencies and run tests
+mvn clean test
+
+# Run the application
+mvn spring-boot:run
+
+# Or build JAR and run
+mvn clean package
+java -jar target/timeforing-app-0.0.1-SNAPSHOT.jar
+```
+
+### 3. Frontend Setup (Coming Soon)
+
+```bash
+cd timeforing-app-gui
+# Frontend setup instructions will be added
+```
+
+## 🔧 Development Tools
+
+### VS Code Configuration
+The project includes VS Code workspace configuration with:
+- **MCP Integration**: GitHub CLI tools for project management
+- **Task Automation**: Build, test, and run tasks
+- **Debug Configuration**: Backend debugging setup
+
+### GitHub Integration
+- **CI/CD Pipelines**: Automated testing and deployment
+- **Security Scanning**: Dependency vulnerability checks
+- **Code Quality**: Automated code analysis
+- **Issue Tracking**: Integrated project management
+
+## 📊 API Documentation
+
+Once the backend is running, access the interactive API documentation:
+
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **OpenAPI JSON**: http://localhost:8080/v3/api-docs
+## 🗄️ Database Setup
+
+### Create Database Schema
 
 ```bash
 # Create database schema and user (connect as system)
@@ -115,132 +187,105 @@ CREATE SCHEMA AUTHORIZATION dev_user;
 mvn flyway:migrate
 ```
 
-### 5. Build and Run
+## 🧪 Testing
+
+### Running Tests
 
 ```bash
-# Build the application with automatic reports
-mvn clean install
-
-# Run tests only
-mvn test
+# Run all tests with coverage
+mvn clean test
 
 # Run integration tests
 mvn verify
 
-# Generate code coverage report (manual)
-mvn jacoco:report
-
-# Generate Allure report (manual)
+# Generate test reports
 mvn allure:report
-
-# Start the application
-mvn spring-boot:run
 ```
 
-## 📊 Code Coverage & Reporting
-
-### Automatic Report Generation
-Both JaCoCo coverage and Allure test reports are **automatically generated** during `mvn install`:
-
-```bash
-# Single command generates everything
-mvn clean install
-```
-
-**Generated Reports:**
+### Test Reports
 - **JaCoCo Coverage**: `target/site/jacoco/index.html`
-- **Allure Test Report**: `target/allure-report/index.html`
+- **Allure Reports**: `target/site/allure-maven-plugin/index.html`
+- **Surefire Reports**: `target/surefire-reports/`
 
-### Manual Report Generation
-### Manual Report Generation
-For individual report generation (optional):
+## 🚀 Production Deployment
 
-```bash
-# Generate coverage report only
-mvn jacoco:report
-
-# Generate Allure report only
-mvn allure:report
-
-# Serve interactive Allure report
-mvn allure:serve
-```
-
-### Allure Test Reports
-### Allure Test Reports
-```bash
-# Serve interactive Allure report
-mvn allure:serve
-```
-
-**Coverage Reports Location:**
-- **JaCoCo HTML**: `target/site/jacoco/index.html`
-- **JaCoCo XML**: `target/site/jacoco/jacoco.xml` (for CI/CD)
-- **Allure Report**: `target/allure-report/index.html`
-
-**Performance Optimizations:**
-- Kotest autoscan disabled for faster test startup
-- Reports generated automatically during build lifecycle
-
-**Coverage Thresholds:**
-- Coverage enforcement is available but currently disabled
-- Uncomment the `jacoco-check` execution in `pom.xml` to enable
-- Default thresholds: Instruction 70%, Branch 60%
-
-### 6. Access the Application
-
-- **API Base URL**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **API Docs**: http://localhost:8080/v3/api-docs
-- **Health Check**: http://localhost:8080/actuator/health
-
-## 📖 API Documentation
-
-The API is fully documented using OpenAPI 3.0 specification. Visit the Swagger UI at http://localhost:8080/swagger-ui.html for interactive documentation.
-
-### Authentication
-
-The API uses OAuth2 JWT Bearer tokens for authentication:
-
-```http
-Authorization: Bearer <your-jwt-token>
-```
-
-### Example Endpoints
-
-- `GET /api/users/{id}` - Get user by ID
-- `POST /api/users` - Create new user
-- `GET /actuator/health` - Health check
-
-## 🧪 Testing
-
-### Unit Tests with Kotest
+### Building for Production
 
 ```bash
-# Run unit tests
-mvn test
+# Build optimized JAR
+mvn clean package -P production
+
+# Run with production profile
+java -jar target/timeforing-app-0.0.1-SNAPSHOT.jar --spring.profiles.active=production
 ```
 
-### Integration Tests with TestContainers
+### Docker Support (Coming Soon)
 
 ```bash
-# Run integration tests (includes TestContainers)
-mvn verify
+# Build Docker image
+docker build -t timeforing-app .
+
+# Run container
+docker run -p 8080:8080 timeforing-app
 ```
 
-### Allure Report
+## 📁 Key Files and Directories
 
-This project is configured to produce Allure results for both unit and integration tests.
+- **`pom.xml`** - Maven configuration with dependencies and plugins
+- **`src/main/kotlin/`** - Application source code
+- **`src/main/resources/application.yml`** - Application configuration
+- **`src/main/resources/db/migration/`** - Flyway database migrations
+- **`src/test/kotlin/`** - Test suites and configurations
+- **`.github/workflows/`** - CI/CD pipeline definitions
+- **`.vscode/`** - VS Code workspace configuration
+- **`timeforing-app-gui/`** - Frontend application (to be developed)
 
-- Results directory: `target/allure-results`
-- Generate static report: `mvn allure:report` (output in `target/site/allure-maven/index.html`)
-- Serve report locally: `mvn allure:serve`
+## 🤝 Contributing
 
-Notes:
-- Kotest integrates with Allure via `AllureTestReporter`. See `src/test/kotlin/ProjectConfig.kt`.
-- The Allure Maven plugin is not bound to the lifecycle; run the goals above after `mvn test` or `mvn verify`.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/awesome-feature`)
+3. Commit your changes (`git commit -m 'Add awesome feature'`)
+4. Push to the branch (`git push origin feature/awesome-feature`)
+5. Open a Pull Request
 
-### Security Scanning with OWASP Dependency Check
+## 📝 Development Guidelines
+
+### Code Style
+- Follow Kotlin coding conventions
+- Use meaningful names for classes, functions, and variables
+- Add KDoc comments for public APIs
+- Maintain high test coverage (>80%)
+
+### Commit Messages
+- Use conventional commit format
+- Include scope and type (feat, fix, docs, etc.)
+- Keep messages concise but descriptive
+
+### Pull Requests
+- Include description of changes
+- Add tests for new functionality
+- Ensure CI pipeline passes
+- Request review from maintainers
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+
+## 👨‍💻 Author
+
+**Norvald Bjarte Algrøy**
+- GitHub: [@norvaldb](https://github.com/norvaldb)
+- Email: norvald@example.com
+
+## 🔗 Links
+
+- **Repository**: https://github.com/norvaldb/timeforing-app
+- **Issues**: https://github.com/norvaldb/timeforing-app/issues
+- **CI/CD**: https://github.com/norvaldb/timeforing-app/actions
+
+---
+
+**Happy coding! 🚀**
 
 ```bash
 # Run OWASP dependency vulnerability scan

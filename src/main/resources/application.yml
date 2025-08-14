@@ -1,14 +1,14 @@
 spring:
   application:
-    name: base-springboot-api-kotlin
+    name: timeforing-app
   
   profiles:
     active: dev
   
   datasource:
-    url: jdbc:oracle:thin:@localhost:1521:XEPDB1
-    username: ${DB_USERNAME:dev_user}
-    password: ${DB_PASSWORD:dev_password}
+    url: jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XEPDB1)))
+    username: ${DB_USERNAME:timeforing_user}
+    password: ${DB_PASSWORD:TimeTrack123}
     driver-class-name: oracle.jdbc.OracleDriver
     hikari:
       maximum-pool-size: 20
@@ -16,12 +16,14 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+      connection-init-sql: SELECT 1 FROM DUAL
   
   flyway:
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 1
-    schemas: ${DB_SCHEMA:DEV_SCHEMA}
+    schemas: ${DB_SCHEMA:TIMEFORING_USER}
     validate-on-migrate: true
     clean-disabled: true
   
@@ -50,6 +52,9 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  health:
+    db:
+      enabled: false
   metrics:
     export:
       prometheus:

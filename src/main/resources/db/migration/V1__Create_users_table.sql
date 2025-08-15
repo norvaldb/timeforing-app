@@ -12,7 +12,7 @@ CREATE TABLE users (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_users_email ON users(email);
+-- Note: idx_users_email is automatically created by the UNIQUE constraint
 CREATE INDEX idx_users_status ON users(status);
 CREATE INDEX idx_users_created_date ON users(created_date);
 

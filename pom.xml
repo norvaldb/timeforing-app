@@ -272,7 +272,7 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>${flyway.version}</version>
                 <configuration>
-                    <url>jdbc:oracle:thin:@localhost:1521:XEPDB1</url>
+                    <url>jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XEPDB1)))</url>
                     <user>${env.DB_USERNAME}</user>
                     <password>${env.DB_PASSWORD}</password>
                     <schemas>

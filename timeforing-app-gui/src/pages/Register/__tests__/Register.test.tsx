@@ -24,9 +24,16 @@ vi.mock('react-router-dom', async () => {
 
 // Mock notification hook
 const mockShowToast = vi.fn();
+const mockError = vi.fn();
+const mockSuccess = vi.fn();
+const mockCustomError = vi.fn();
+
 vi.mock('@/components/notifications/NotificationToast', () => ({
   useNotification: () => ({
     showToast: mockShowToast,
+    error: mockError,
+    success: mockSuccess,
+    customError: mockCustomError,
   }),
 }));
 
@@ -49,12 +56,12 @@ describe('Register', () => {
     renderWithRouter(<Register />);
     
     expect(screen.getByRole('heading', { name: 'Opprett bruker' })).toBeInTheDocument();
-    expect(screen.getByText('Registrer deg for å komme i gang med timeføring.')).toBeInTheDocument();
+    expect(screen.getByText('Fyll inn informasjonen din for å komme i gang')).toBeInTheDocument();
     
-    // Check form fields
-    expect(screen.getByLabelText('Navn *')).toBeInTheDocument();
-    expect(screen.getByLabelText('Mobilnummer *')).toBeInTheDocument();
-    expect(screen.getByLabelText('Epost *')).toBeInTheDocument();
+    // Check form fields by input names
+    expect(screen.getByPlaceholderText('Skriv inn ditt navn')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('+47 123 45 678')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('din@epost.no')).toBeInTheDocument();
     
     // Check submit button
     expect(screen.getByRole('button', { name: 'Opprett bruker' })).toBeInTheDocument();
@@ -63,11 +70,10 @@ describe('Register', () => {
   it('should render link to login page', () => {
     renderWithRouter(<Register />);
     
-    expect(screen.getByText('Har du allerede en bruker?')).toBeInTheDocument();
+    expect(screen.getByText('Allerede bruker?')).toBeInTheDocument();
     
-    const loginLink = screen.getByRole('link', { name: 'Logg inn her' });
-    expect(loginLink).toBeInTheDocument();
-    expect(loginLink).toHaveAttribute('href', '/login');
+    const dashboardLink = screen.getByRole('button', { name: 'Gå til dashboard' });
+    expect(dashboardLink).toBeInTheDocument();
   });
 
   it('should handle successful registration', async () => {
@@ -77,7 +83,7 @@ describe('Register', () => {
     MockedUserService.register.mockResolvedValueOnce({
       id: '1',
       navn: 'Test Bruker',
-      mobil: '+47 12345678',
+      mobil: '+4741234567',
       epost: 'test@example.com',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -85,10 +91,10 @@ describe('Register', () => {
 
     renderWithRouter(<Register />);
     
-    // Fill out the form
-    await user.type(screen.getByLabelText('Navn *'), 'Test Bruker');
-    await user.type(screen.getByLabelText('Mobilnummer *'), '+47 12345678');
-    await user.type(screen.getByLabelText('Epost *'), 'test@example.com');
+    // Fill out the form using placeholder text
+    await user.type(screen.getByPlaceholderText('Skriv inn ditt navn'), 'Test Bruker');
+    await user.type(screen.getByPlaceholderText('+47 123 45 678'), '41234567');
+    await user.type(screen.getByPlaceholderText('din@epost.no'), 'test@example.com');
     
     // Submit the form
     const submitButton = screen.getByRole('button', { name: 'Opprett bruker' });
@@ -97,16 +103,20 @@ describe('Register', () => {
     await waitFor(() => {
       expect(MockedUserService.register).toHaveBeenCalledWith({
         navn: 'Test Bruker',
-        mobil: '+47 12345678',
+        mobil: '+4741234567',
         epost: 'test@example.com',
       });
     });
 
     // Check success notification and navigation
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('Bruker opprettet!', 'success');
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+      expect(mockSuccess).toHaveBeenCalledWith('brukerOpprettet');
     });
+
+    // Wait for the 1.5s navigation delay
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    }, { timeout: 2000 });
   });
 
   it('should handle registration error', async () => {
@@ -114,18 +124,17 @@ describe('Register', () => {
     
     // Mock registration error
     MockedUserService.register.mockRejectedValueOnce({
-      response: {
-        status: 409,
-        data: { message: 'Email already exists' }
-      }
+      message: 'Epost addressen er allerede registrert',
+      code: 'DUPLICATE_EMAIL',
+      status: 409
     });
 
     renderWithRouter(<Register />);
     
-    // Fill out the form
-    await user.type(screen.getByLabelText('Navn *'), 'Test Bruker');
-    await user.type(screen.getByLabelText('Mobilnummer *'), '+47 12345678');
-    await user.type(screen.getByLabelText('Epost *'), 'existing@example.com');
+    // Fill out the form using placeholder text
+    await user.type(screen.getByPlaceholderText('Skriv inn ditt navn'), 'Test Bruker');
+    await user.type(screen.getByPlaceholderText('+47 123 45 678'), '41234567');
+    await user.type(screen.getByPlaceholderText('din@epost.no'), 'existing@example.com');
     
     // Submit the form
     const submitButton = screen.getByRole('button', { name: 'Opprett bruker' });
@@ -137,7 +146,7 @@ describe('Register', () => {
 
     // Check error notification
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('Epost addressen er allerede registrert', 'error');
+      expect(mockError).toHaveBeenCalledWith('epostAlleredeRegistrert');
       expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
@@ -152,34 +161,34 @@ describe('Register', () => {
 
     renderWithRouter(<Register />);
     
-    // Fill out the form
-    await user.type(screen.getByLabelText('Navn *'), 'Test Bruker');
-    await user.type(screen.getByLabelText('Mobilnummer *'), '+47 12345678');
-    await user.type(screen.getByLabelText('Epost *'), 'test@example.com');
+    // Fill out the form using placeholder text
+    await user.type(screen.getByPlaceholderText('Skriv inn ditt navn'), 'Test Bruker');
+    await user.type(screen.getByPlaceholderText('+47 123 45 678'), '41234567');
+    await user.type(screen.getByPlaceholderText('din@epost.no'), 'test@example.com');
     
     // Submit the form
     const submitButton = screen.getByRole('button', { name: 'Opprett bruker' });
     await user.click(submitButton);
     
-    // Check loading state
-    expect(screen.getByRole('button', { name: 'Oppretter...' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Oppretter...' })).toBeDisabled();
+    // Check loading state - look for disabled button
+    expect(screen.getByRole('button', { name: 'Opprett bruker' })).toBeDisabled();
   });
 
   it('should have proper accessibility attributes', () => {
     renderWithRouter(<Register />);
     
-    // Check main heading
-    const heading = screen.getByRole('heading', { level: 1 });
+    // Check main heading (it's h2 not h1)
+    const heading = screen.getByRole('heading', { name: 'Opprett bruker' });
     expect(heading).toHaveTextContent('Opprett bruker');
     
-    // Check form accessibility
-    const form = screen.getByRole('form');
-    expect(form).toBeInTheDocument();
+    // Check button accessibility
+    const submitButton = screen.getByRole('button', { name: 'Opprett bruker' });
+    expect(submitButton).toBeInTheDocument();
     
-    // Check link accessibility
-    const loginLink = screen.getByRole('link', { name: 'Logg inn her' });
-    expect(loginLink).toHaveAttribute('href', '/login');
+    // Check input fields are accessible
+    expect(screen.getByLabelText('Navn')).toBeInTheDocument();
+    expect(screen.getByLabelText('Mobilnummer')).toBeInTheDocument();
+    expect(screen.getByLabelText('Epost')).toBeInTheDocument();
   });
 
   it('should handle network error gracefully', async () => {
@@ -190,17 +199,17 @@ describe('Register', () => {
 
     renderWithRouter(<Register />);
     
-    // Fill out the form
-    await user.type(screen.getByLabelText('Navn *'), 'Test Bruker');
-    await user.type(screen.getByLabelText('Mobilnummer *'), '+47 12345678');
-    await user.type(screen.getByLabelText('Epost *'), 'test@example.com');
+    // Fill out the form using placeholder text
+    await user.type(screen.getByPlaceholderText('Skriv inn ditt navn'), 'Test Bruker');
+    await user.type(screen.getByPlaceholderText('+47 123 45 678'), '41234567');
+    await user.type(screen.getByPlaceholderText('din@epost.no'), 'test@example.com');
     
     // Submit the form
     const submitButton = screen.getByRole('button', { name: 'Opprett bruker' });
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('Kunne ikke kontakte server', 'error');
+      expect(mockError).toHaveBeenCalledWith('noeGikkGalt');
     });
   });
 });

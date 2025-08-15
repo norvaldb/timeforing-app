@@ -6,21 +6,25 @@ describe('validation', () => {
     it('should validate correct user data', () => {
       const validData = {
         navn: 'Test Bruker',
-        mobil: '+47 12345678',
+        mobil: '+47 41234567',
         epost: 'test@example.com',
       };
 
       const result = userFormSchema.safeParse(validData);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toEqual(validData);
+        expect(result.data).toEqual({
+          navn: 'Test Bruker',
+          mobil: '+4741234567',
+          epost: 'test@example.com',
+        });
       }
     });
 
     it('should reject name that is too short', () => {
       const invalidData = {
         navn: 'A',
-        mobil: '+47 12345678',
+        mobil: '+47 41234567',
         epost: 'test@example.com',
       };
 
@@ -39,7 +43,7 @@ describe('validation', () => {
         'abc123456',      // Contains letters
         '47 12345678',    // Missing +
         '+47 12345',      // Too short
-        '+47 32345678',   // Invalid prefix (3)
+        '+47 12345678',   // Invalid prefix (1)
       ];
 
       testCases.forEach(invalidMobile => {
@@ -90,13 +94,12 @@ describe('validation', () => {
         'test@',
         'test.example.com',
         'test@.com',
-        '',
       ];
 
       invalidEmails.forEach(invalidEmail => {
         const invalidData = {
           navn: 'Test Bruker',
-          mobil: '+47 12345678',
+          mobil: '+47 41234567',
           epost: invalidEmail,
         };
 
@@ -106,6 +109,19 @@ describe('validation', () => {
           expect(result.error.issues?.[0]?.message).toBe('Ugyldig epost adresse');
         }
       });
+
+      // Test empty email separately - it should give "required" error first
+      const emptyEmailData = {
+        navn: 'Test Bruker',
+        mobil: '+47 41234567',
+        epost: '',
+      };
+
+      const result = userFormSchema.safeParse(emptyEmailData);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues?.[0]?.message).toBe('Epost er påkrevd');
+      }
     });
 
     it('should accept valid email addresses', () => {
@@ -120,7 +136,7 @@ describe('validation', () => {
       validEmails.forEach(validEmail => {
         const validData = {
           navn: 'Test Bruker',
-          mobil: '+47 12345678',
+          mobil: '+47 41234567',
           epost: validEmail,
         };
 
@@ -139,29 +155,29 @@ describe('validation', () => {
       const result = userFormSchema.safeParse(emptyData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues).toHaveLength(3);
-        expect(result.error.issues.map(issue => issue.message)).toContain('Navn må være minst 2 tegn');
-        expect(result.error.issues.map(issue => issue.message)).toContain('Ugyldig norsk mobilnummer');
-        expect(result.error.issues.map(issue => issue.message)).toContain('Ugyldig epost adresse');
+        const messages = result.error.issues.map(issue => issue.message);
+        expect(messages).toContain('Navn er påkrevd');
+        expect(messages).toContain('Mobilnummer er påkrevd');
+        expect(messages).toContain('Epost er påkrevd');
       }
     });
   });
 
   describe('formatMobileNumber', () => {
     it('should format 8-digit Norwegian mobile number', () => {
-      expect(formatMobileNumber('12345678')).toBe('+47 123 45 678');
+      expect(formatMobileNumber('41234567')).toBe('+47 412 34 567');
       expect(formatMobileNumber('91234567')).toBe('+47 912 34 567');
     });
 
     it('should handle numbers with existing country code', () => {
-      expect(formatMobileNumber('+4712345678')).toBe('+47 123 45 678');
-      expect(formatMobileNumber('4712345678')).toBe('+47 123 45 678');
-      expect(formatMobileNumber('004712345678')).toBe('+47 123 45 678');
+      expect(formatMobileNumber('+4741234567')).toBe('+47 412 34 567');
+      expect(formatMobileNumber('4741234567')).toBe('+47 412 34 567');
+      expect(formatMobileNumber('004741234567')).toBe('+47 412 34 567');
     });
 
     it('should handle numbers with spaces', () => {
-      expect(formatMobileNumber('123 45 678')).toBe('+47 123 45 678');
-      expect(formatMobileNumber('+47 123 45 678')).toBe('+47 123 45 678');
+      expect(formatMobileNumber('412 34 567')).toBe('+47 412 34 567');
+      expect(formatMobileNumber('+47 412 34 567')).toBe('+47 412 34 567');
     });
 
     it('should return original string for invalid inputs', () => {

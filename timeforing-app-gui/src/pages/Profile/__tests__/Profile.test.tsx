@@ -15,9 +15,16 @@ vi.mock('@/services/userService', () => ({
 
 // Mock notification hook
 const mockShowToast = vi.fn();
+const mockError = vi.fn();
+const mockSuccess = vi.fn();
+const mockCustomError = vi.fn();
+
 vi.mock('@/components/notifications/NotificationToast', () => ({
   useNotification: () => ({
     showToast: mockShowToast,
+    error: mockError,
+    success: mockSuccess,
+    customError: mockCustomError,
   }),
 }));
 
@@ -26,7 +33,7 @@ const MockedUserService = vi.mocked(userService);
 const mockUser = {
   id: '1',
   navn: 'Test Bruker',
-  mobil: '+47 12345678',
+  mobil: '+47 41234567',
   epost: 'test@example.com',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
@@ -41,12 +48,12 @@ describe('Profile', () => {
   it('should render profile page in Norwegian', async () => {
     render(<Profile />);
     
-    expect(screen.getByRole('heading', { name: 'Profil' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Min profil' })).toBeInTheDocument();
     expect(screen.getByText('Administrer din profilinformasjon og kontoinnstillinger.')).toBeInTheDocument();
     
     await waitFor(() => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
-      expect(screen.getByText('+47 12345678')).toBeInTheDocument();
+      expect(screen.getByText('+47 41234567')).toBeInTheDocument();
       expect(screen.getByText('test@example.com')).toBeInTheDocument();
     });
   });
@@ -77,7 +84,7 @@ describe('Profile', () => {
     render(<Profile />);
     
     await waitFor(() => {
-      expect(screen.getByText('Kunne ikke laste profil')).toBeInTheDocument();
+      expect(mockCustomError).toHaveBeenCalledWith('Kunne ikke laste profil');
     });
   });
 
@@ -89,12 +96,12 @@ describe('Profile', () => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
     
-    const editButton = screen.getByRole('button', { name: 'Rediger profil' });
+    const editButton = screen.getByRole('button', { name: 'Rediger' });
     await user.click(editButton);
     
     // Should show form fields
     expect(screen.getByDisplayValue('Test Bruker')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('+47 12345678')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('+47 41234567')).toBeInTheDocument();
     expect(screen.getByDisplayValue('test@example.com')).toBeInTheDocument();
     
     // Should show save and cancel buttons
@@ -111,7 +118,7 @@ describe('Profile', () => {
     });
     
     // Enter edit mode
-    const editButton = screen.getByRole('button', { name: 'Rediger profil' });
+    const editButton = screen.getByRole('button', { name: 'Rediger' });
     await user.click(editButton);
     
     // Cancel edit mode
@@ -119,7 +126,7 @@ describe('Profile', () => {
     await user.click(cancelButton);
     
     // Should show read-only view again
-    expect(screen.getByRole('button', { name: 'Rediger profil' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rediger' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Lagre endringer' })).not.toBeInTheDocument();
   });
 
@@ -136,7 +143,7 @@ describe('Profile', () => {
     });
     
     // Enter edit mode
-    const editButton = screen.getByRole('button', { name: 'Rediger profil' });
+    const editButton = screen.getByRole('button', { name: 'Rediger' });
     await user.click(editButton);
     
     // Update name field
@@ -151,13 +158,13 @@ describe('Profile', () => {
     await waitFor(() => {
       expect(MockedUserService.updateProfile).toHaveBeenCalledWith({
         navn: 'Updated Name',
-        mobil: '+47 12345678',
+        mobil: '+47 41234567',
         epost: 'test@example.com',
       });
     });
 
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('Profil oppdatert!', 'success');
+      expect(mockSuccess).toHaveBeenCalledWith('profilOppdatert');
     });
   });
 
@@ -175,14 +182,14 @@ describe('Profile', () => {
     });
     
     // Enter edit mode and save
-    const editButton = screen.getByRole('button', { name: 'Rediger profil' });
+    const editButton = screen.getByRole('button', { name: 'Rediger' });
     await user.click(editButton);
     
     const saveButton = screen.getByRole('button', { name: 'Lagre endringer' });
     await user.click(saveButton);
     
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('Noe gikk galt, prøv igjen', 'error');
+      expect(mockError).toHaveBeenCalledWith('noeGikkGalt');
     });
   });
 
@@ -193,9 +200,9 @@ describe('Profile', () => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
     
-    expect(screen.getByRole('heading', { name: 'Slett konto' })).toBeInTheDocument();
+    expect(screen.getByText('Slett konto')).toBeInTheDocument();
     expect(screen.getByText('Denne handlingen kan ikke angres.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Slett konto' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Slett' })).toBeInTheDocument();
   });
 
   it('should show confirmation dialog when deleting account', async () => {
@@ -211,7 +218,7 @@ describe('Profile', () => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
     
-    const deleteButton = screen.getByRole('button', { name: 'Slett konto' });
+    const deleteButton = screen.getByRole('button', { name: 'Slett' });
     await user.click(deleteButton);
     
     expect(mockConfirm).toHaveBeenCalledWith(
@@ -234,12 +241,12 @@ describe('Profile', () => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
     
-    const deleteButton = screen.getByRole('button', { name: 'Slett konto' });
+    const deleteButton = screen.getByRole('button', { name: 'Slett' });
     await user.click(deleteButton);
     
     await waitFor(() => {
       expect(MockedUserService.deleteAccount).toHaveBeenCalled();
-      expect(mockShowToast).toHaveBeenCalledWith('Konto slettet', 'success');
+      expect(mockSuccess).toHaveBeenCalledWith('kontoSlettet');
     });
   });
 
@@ -258,11 +265,11 @@ describe('Profile', () => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
     
-    const deleteButton = screen.getByRole('button', { name: 'Slett konto' });
+    const deleteButton = screen.getByRole('button', { name: 'Slett' });
     await user.click(deleteButton);
     
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith('Noe gikk galt, prøv igjen', 'error');
+      expect(mockError).toHaveBeenCalledWith('noeGikkGalt');
     });
   });
 
@@ -275,14 +282,13 @@ describe('Profile', () => {
     
     // Check main heading
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent('Profil');
+    expect(heading).toHaveTextContent('Min profil');
     
     // Check section headings
-    expect(screen.getByRole('heading', { level: 2, name: 'Profilinformasjon' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: 'Slett konto' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Brukerinformasjon' })).toBeInTheDocument();
     
     // Check buttons
-    expect(screen.getByRole('button', { name: 'Rediger profil' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Slett konto' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rediger' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Slett' })).toBeInTheDocument();
   });
 });

@@ -18,8 +18,7 @@ CREATE TABLE time_entries (
     
     -- Check constraints for data validation
     CONSTRAINT ck_time_entries_timer_positive CHECK (timer > 0),
-    CONSTRAINT ck_time_entries_timer_max CHECK (timer <= 24), -- Max 24 hours per entry
-    CONSTRAINT ck_time_entries_dato_not_future CHECK (dato <= CURRENT_DATE)
+    CONSTRAINT ck_time_entries_timer_max CHECK (timer <= 24) -- Max 24 hours per entry
 );
 
 -- Create indexes for performance

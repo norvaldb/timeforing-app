@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-// Norwegian mobile number validation regex
-// Accepts: +47 12345678, 47 12345678, 12345678, +47 123 45 678
-const norwegianMobileRegex = /^(\+47|0047|47)?[\s]?[4-9]\d{7}$/;
-
 // Norwegian error messages
 const errorMessages = {
   navn: {
@@ -33,7 +29,11 @@ export const userFormSchema = z.object({
   mobil: z
     .string({ required_error: errorMessages.mobil.required })
     .min(1, errorMessages.mobil.required)
-    .regex(norwegianMobileRegex, errorMessages.mobil.invalid)
+    .refine((val) => {
+      const cleaned = val.replace(/\s/g, '');
+      // Check if it matches Norwegian mobile pattern
+      return /^(\+47|0047|47)?[4-9]\d{7}$/.test(cleaned);
+    }, errorMessages.mobil.invalid)
     .transform((val) => {
       // Normalize mobile number format
       const cleaned = val.replace(/\s/g, '');
@@ -62,7 +62,11 @@ export const profileUpdateSchema = z.object({
   
   mobil: z
     .string()
-    .regex(norwegianMobileRegex, errorMessages.mobil.invalid)
+    .refine((val) => {
+      if (!val) return true; // Optional field
+      const cleaned = val.replace(/\s/g, '');
+      return /^(\+47|0047|47)?[4-9]\d{7}$/.test(cleaned);
+    }, errorMessages.mobil.invalid)
     .transform((val) => {
       if (!val) return undefined;
       const cleaned = val.replace(/\s/g, '');
@@ -90,21 +94,35 @@ export { errorMessages };
 
 // Utility function to validate Norwegian mobile number
 export const isValidNorwegianMobile = (mobile: string): boolean => {
-  return norwegianMobileRegex.test(mobile);
+  const cleaned = mobile.replace(/\s/g, '');
+  return /^(\+47|0047|47)?[4-9]\d{7}$/.test(cleaned);
 };
 
 // Utility function to format mobile number for display
 export const formatMobileNumber = (mobile: string): string => {
   const cleaned = mobile.replace(/\s/g, '');
   
+  // Handle numbers with country code
   if (cleaned.startsWith('+47')) {
     const number = cleaned.slice(3);
     return `+47 ${number.slice(0, 3)} ${number.slice(3, 5)} ${number.slice(5)}`;
   }
   
-  if (cleaned.length === 8) {
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(5)}`;
+  if (cleaned.startsWith('0047')) {
+    const number = cleaned.slice(4);
+    return `+47 ${number.slice(0, 3)} ${number.slice(3, 5)} ${number.slice(5)}`;
   }
   
+  if (cleaned.startsWith('47') && cleaned.length === 10) {
+    const number = cleaned.slice(2);
+    return `+47 ${number.slice(0, 3)} ${number.slice(3, 5)} ${number.slice(5)}`;
+  }
+  
+  // Handle 8-digit Norwegian mobile numbers
+  if (cleaned.length === 8 && /^[4-9]/.test(cleaned)) {
+    return `+47 ${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(5)}`;
+  }
+  
+  // Return original if it doesn't match expected patterns
   return mobile;
 };

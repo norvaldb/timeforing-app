@@ -5,7 +5,9 @@
 # =============================================================================
 # Simple script using podman-compose to start Oracle database
 #
-# Usage: ./scripts/start-database.sh [--recreate]
+# Usage: 
+#   ./scripts/start-database.sh        - Start database (normal)
+#   ./scripts/start-database.sh --create - Recreate database volume and user
 # =============================================================================
 
 set -e
@@ -22,128 +24,56 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# Check if podman-compose is available, otherwise use basic podman commands
-if command -v podman-compose &> /dev/null; then
-    COMPOSE_CMD="podman-compose"
-    USE_COMPOSE=true
-else
-    log_warning "podman-compose not found, using direct podman commands"
-    USE_COMPOSE=false
-fi
-
-# Handle recreate option
-if [ "$1" = "--recreate" ]; then
-    log_info "Recreating database container..."
-    if [ "$USE_COMPOSE" = true ]; then
-        $COMPOSE_CMD down -v
-    else
-        podman stop timeforing-oracle 2>/dev/null || true
-        podman rm timeforing-oracle 2>/dev/null || true
-        podman volume rm oracle-data 2>/dev/null || true
+# Handle create option
+if [ "$1" = "--create" ]; then
+    log_info "Recreating database container and volume..."
+    
+    # Check if container is running and stop it
+    if podman ps --format "{{.Names}}" | grep -q "timeforing-oracle"; then
+        log_info "Stopping running timeforing-oracle container..."
+        podman-compose down
     fi
-fi
-
-# Create volume if needed
-if [ "$USE_COMPOSE" = false ]; then
-    podman volume create oracle-data 2>/dev/null || true
+    
+    # Check if stopped container exists and remove it
+    if podman ps -a --format "{{.Names}}" | grep -q "timeforing-oracle"; then
+        log_info "Removing existing timeforing-oracle container..."
+        podman container rm timeforing-oracle 2>/dev/null || true
+    fi
+    
+    # Check if volume exists and remove it
+    if podman volume ls --format "{{.Name}}" | grep -q "timeforing-app_oracle-data"; then
+        log_info "Removing existing Oracle data volume..."
+        podman volume rm timeforing-app_oracle-data 2>/dev/null || true
+    fi
+    
+    # Remove any lingering networks
+    if podman network ls --format "{{.Name}}" | grep -q "timeforing-app_default"; then
+        log_info "Removing existing network..."
+        podman network rm timeforing-app_default 2>/dev/null || true
+    fi
+    
+    log_success "Cleanup completed successfully"
+    SHOULD_CREATE_USER=true
+else
+    SHOULD_CREATE_USER=false
 fi
 
 # Start database
-if [ "$USE_COMPOSE" = true ]; then
-    log_info "Starting Oracle database with $COMPOSE_CMD..."
-    $COMPOSE_CMD up -d
-else
-    log_info "Starting Oracle database with podman..."
-    
-    # Check if container already exists and is running
-    if podman ps --format "{{.Names}}" | grep -q "timeforing-oracle"; then
-        log_success "Container is already running!"
-    elif podman ps -a --format "{{.Names}}" | grep -q "timeforing-oracle"; then
-        log_info "Starting existing container..."
-        podman start timeforing-oracle
-    else
-        log_info "Creating new container..."
-        podman run -d \
-            --name timeforing-oracle \
-            -p 1521:1521 \
-            -p 5500:5500 \
-            -e ORACLE_PWD=TimeForing123! \
-            -v oracle-data:/opt/oracle/oradata \
-            container-registry.oracle.com/database/express:latest
-    fi
-fi
-
-# Wait for database
-log_info "Waiting for container to be ready..."
-sleep 30  # Give Oracle time to initialize
-
-# Check if database user exists
-check_user_exists() {
-    log_info "Checking if database user exists..."
-    
-    # Try to connect directly as the user - if successful, user exists
-    if podman exec timeforing-oracle bash -c "echo 'SELECT 1 FROM dual;' | sqlplus -s timeforing_user/TimeTrack123@localhost:1521/XEPDB1" &>/dev/null; then
-        log_success "Database user already exists, skipping creation"
-        return 0
-    else
-        log_info "Database user does not exist or cannot connect, will create/setup"
-        return 1
-    fi
-}
-
-# Setup database user if needed
-setup_database_user() {
-    log_info "Setting up database user..."
-    
-    # Create setup script
-    podman exec timeforing-oracle bash -c "cat > /tmp/setup_user.sql << 'EOF'
--- Connect to the pluggable database
-ALTER SESSION SET CONTAINER = XEPDB1;
-
--- Create user if not exists (ignore error if user already exists)
-BEGIN
-    EXECUTE IMMEDIATE 'CREATE USER timeforing_user IDENTIFIED BY TimeTrack123 DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -1920 THEN -- User already exists
-            RAISE;
-        END IF;
-END;
-/
-
--- Grant necessary privileges
-GRANT CONNECT, RESOURCE, CREATE SESSION TO timeforing_user;
-GRANT CREATE TABLE, CREATE VIEW, CREATE PROCEDURE TO timeforing_user;
-GRANT UNLIMITED TABLESPACE TO timeforing_user;
-
--- Verify user exists
-SELECT 'User created successfully' as status FROM dual WHERE EXISTS (
-    SELECT 1 FROM dba_users WHERE username = 'TIMEFORING_USER'
-);
-
-EXIT;
-EOF"
-    
-    # Execute the setup script
-    if podman exec timeforing-oracle bash -c "sqlplus -s 'sys/TimeForing123!@localhost:1521/XEPDB1' as sysdba @/tmp/setup_user.sql" > /tmp/setup_output.log 2>&1; then
-        log_success "Database user setup completed"
-    else
-        log_warning "User setup had issues, but may already exist"
-    fi
-    
-    # Clean up
-    podman exec timeforing-oracle rm -f /tmp/setup_user.sql
-}
+log_info "Starting Oracle database..."
+podman-compose up -d
 
 # Wait for Oracle to be fully ready
 wait_for_oracle() {
     log_info "Waiting for Oracle database to be fully ready..."
-    local max_attempts=30
+    local max_attempts=60  # Increased from 30 to 60 (5 minutes total)
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if podman exec timeforing-oracle bash -c "echo 'SELECT 1 FROM dual;' | sqlplus -s 'sys/TimeForing123!@localhost:1521/XEPDB1' as sysdba" &>/dev/null; then
+        # Test connection to the pluggable database specifically
+        if podman exec timeforing-oracle bash -c "echo 'SELECT 1 FROM dual;' | sqlplus -s 'sys/TimeForing123!@XEPDB1' as sysdba" &>/dev/null; then
             log_success "Oracle database is ready!"
+            # Give it a few more seconds to ensure it's fully stable
+            sleep 10
             return 0
         fi
         
@@ -157,24 +87,65 @@ wait_for_oracle() {
     return 1
 }
 
+# Setup database user
+setup_database_user() {
+    log_info "Setting up database user and schema..."
+    
+    # Wait a bit more to ensure Oracle is completely ready for user creation
+    sleep 5
+    
+    # Create user with retry logic
+    local max_attempts=3
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        log_info "Attempting to create user (attempt $attempt/$max_attempts)..."
+        
+        if podman exec timeforing-oracle bash -c 'echo "CREATE USER timeforing_user IDENTIFIED BY TimeTrack123;
+GRANT CONNECT, RESOURCE, CREATE SESSION, CREATE TABLE, CREATE SEQUENCE, CREATE VIEW TO timeforing_user;
+GRANT UNLIMITED TABLESPACE TO timeforing_user;
+ALTER USER timeforing_user DEFAULT TABLESPACE USERS;
+EXIT;" | sqlplus -s sys/TimeForing123!@XEPDB1 as sysdba' > /tmp/setup_output.log 2>&1; then
+            log_success "Database user and schema created"
+            return 0
+        else
+            log_warning "Attempt $attempt failed, waiting 10 seconds before retry..."
+            cat /tmp/setup_output.log
+            if [ $attempt -lt $max_attempts ]; then
+                sleep 10
+            fi
+            ((attempt++))
+        fi
+    done
+    
+    log_error "Failed to create database user after $max_attempts attempts"
+    exit 1
+}
+
 # Wait for Oracle to be ready first
 wait_for_oracle
 
-# Check if user exists, and create only if needed
-if ! check_user_exists; then
+# Create user only if --create option was used
+if [ "$SHOULD_CREATE_USER" = true ]; then
     setup_database_user
 fi
 
-# Verify connection
-log_info "Verifying database connection..."
-if podman exec timeforing-oracle bash -c "echo 'SELECT USER FROM dual;' | sqlplus -s timeforing_user/TimeTrack123@localhost:1521/XEPDB1" &>/dev/null; then
-    log_success "Database connection verified!"
-    echo "Connection: localhost:1521/XEPDB1"
-    echo "User: timeforing_user"
-    echo "Password: TimeTrack123"
-else
-    log_warning "Direct connection test failed"
-    log_info "User may need more time to be activated, try again in a few minutes"
+# Verify connection (only if user should exist)
+if [ "$SHOULD_CREATE_USER" = true ]; then
+    log_info "Verifying database connection..."
+    if podman exec timeforing-oracle bash -c 'echo "SELECT USER FROM dual;" | sqlplus -s timeforing_user/TimeTrack123@localhost:1521/XEPDB1' &>/dev/null; then
+        log_success "Database connection verified!"
+    else
+        log_warning "User connection failed, may need more time to be activated"
+    fi
 fi
 
 log_success "Database startup completed!"
+if [ "$SHOULD_CREATE_USER" = true ]; then
+    echo ""
+    echo "Database connection details:"
+    echo "URL: jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XEPDB1)))"
+    echo "User: timeforing_user"
+    echo "Password: TimeTrack123"
+    echo "Schema: TIMEFORING_USER"
+fi

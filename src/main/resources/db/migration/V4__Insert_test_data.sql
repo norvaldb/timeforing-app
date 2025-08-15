@@ -2,32 +2,33 @@
 -- This migration adds sample data to all tables
 
 -- Insert test users (including Norwegian characters æ, ø, å)
-INSERT INTO users (navn, email, mobil, status) VALUES 
+-- Using Norwegian field names: navn, epost, mobil
+INSERT INTO users (navn, epost, mobil, status) VALUES 
     ('Ola Nordmann', 'ola.nordmann@example.com', '+4791234567', 'ACTIVE');
 
-INSERT INTO users (navn, email, mobil, status) VALUES 
+INSERT INTO users (navn, epost, mobil, status) VALUES 
     ('Kari Hansen', 'kari.hansen@example.com', '+4798765432', 'ACTIVE');
 
-INSERT INTO users (navn, email, mobil, status) VALUES 
+INSERT INTO users (navn, epost, mobil, status) VALUES 
     ('Erik Nilsen', 'erik.nilsen@example.com', '+4795555555', 'ACTIVE');
 
-INSERT INTO users (navn, email, mobil, status) VALUES 
+INSERT INTO users (navn, epost, mobil, status) VALUES 
     ('Anne Larsen', 'anne.larsen@example.com', '90123456', 'INACTIVE');
 
 -- Users with Norwegian characters
-INSERT INTO users (navn, email, mobil, status) VALUES 
+INSERT INTO users (navn, epost, mobil, status) VALUES 
     ('Bjørn Sæterdal', 'bjorn.saterdal@example.com', '+4792345678', 'ACTIVE');
 
-INSERT INTO users (navn, email, mobil, status) VALUES 
+INSERT INTO users (navn, epost, mobil, status) VALUES 
     ('Åse Røed', 'ase.roed@example.com', '+4793456789', 'ACTIVE');
 
-INSERT INTO users (navn, email, mobil, status) VALUES 
+INSERT INTO users (navn, epost, mobil, status) VALUES 
     ('Per Åsmund Høiby', 'per.asmund.hoiby@example.com', '+4794567890', 'PENDING');
 
-INSERT INTO users (navn, email, mobil, status) VALUES 
+INSERT INTO users (navn, epost, mobil, status) VALUES 
     ('Kjersti Øvrebø', 'kjersti.ovrebo@example.com', '91234567', 'SUSPENDED');
 
--- Get user IDs for foreign key references (using email to find users)
+-- Get user IDs for foreign key references (using epost to find users)
 DECLARE
     v_ola_id NUMBER;
     v_kari_id NUMBER;
@@ -39,14 +40,14 @@ DECLARE
     v_kjersti_id NUMBER;
 BEGIN
     -- Get user IDs
-    SELECT user_id INTO v_ola_id FROM users WHERE email = 'ola.nordmann@example.com';
-    SELECT user_id INTO v_kari_id FROM users WHERE email = 'kari.hansen@example.com';
-    SELECT user_id INTO v_erik_id FROM users WHERE email = 'erik.nilsen@example.com';
-    SELECT user_id INTO v_anne_id FROM users WHERE email = 'anne.larsen@example.com';
-    SELECT user_id INTO v_bjorn_id FROM users WHERE email = 'bjorn.saterdal@example.com';
-    SELECT user_id INTO v_ase_id FROM users WHERE email = 'ase.roed@example.com';
-    SELECT user_id INTO v_per_id FROM users WHERE email = 'per.asmund.hoiby@example.com';
-    SELECT user_id INTO v_kjersti_id FROM users WHERE email = 'kjersti.ovrebo@example.com';
+    SELECT user_id INTO v_ola_id FROM users WHERE epost = 'ola.nordmann@example.com';
+    SELECT user_id INTO v_kari_id FROM users WHERE epost = 'kari.hansen@example.com';
+    SELECT user_id INTO v_erik_id FROM users WHERE epost = 'erik.nilsen@example.com';
+    SELECT user_id INTO v_anne_id FROM users WHERE epost = 'anne.larsen@example.com';
+    SELECT user_id INTO v_bjorn_id FROM users WHERE epost = 'bjorn.saterdal@example.com';
+    SELECT user_id INTO v_ase_id FROM users WHERE epost = 'ase.roed@example.com';
+    SELECT user_id INTO v_per_id FROM users WHERE epost = 'per.asmund.hoiby@example.com';
+    SELECT user_id INTO v_kjersti_id FROM users WHERE epost = 'kjersti.ovrebo@example.com';
 
     -- Insert test projects
     INSERT INTO projects (navn, beskrivelse, aktiv, bruker_id) VALUES 

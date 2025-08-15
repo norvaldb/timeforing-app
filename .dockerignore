@@ -1,0 +1,52 @@
+# Docker ignore file for timeforing-app
+# Excludes files and directories from Docker build context
+
+# Target directory (build artifacts)
+target/
+!target/*.jar
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+logs/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Development files
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Scripts (not needed in container)
+scripts/
+
+# GUI application
+timeforing-app-gui/
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Maven wrapper jar (we copy it explicitly)
+!.mvn/wrapper/maven-wrapper.jar

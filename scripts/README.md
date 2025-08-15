@@ -1,86 +1,125 @@
-# Database Management Scripts
+# API Management Scripts
 
-This directory contains scripts to manage the Oracle XE database container for the Timeforing application.
+This directory contains scripts to manage the Oracle XE database and Spring Boot API containers for the Timeforing application.
 
 ## Prerequisites
 
-- Podman installed and running
+- Podman and podman-compose installed and running
 - Oracle XE image: `container-registry.oracle.com/database/express:latest`
 
 ## Scripts
 
-### start-database.sh
+### start-api.sh
 
-Starts the Oracle XE database container with **automated user setup**.
+Starts both the Oracle XE database and Spring Boot API containers with **automated setup**.
 
 ```bash
-# Start database (uses existing container if available)
-./scripts/start-database.sh
+# Start both database and API (default)
+./scripts/start-api.sh
 
-# Recreate database container from scratch
-./scripts/start-database.sh --recreate
+# Recreate database container and user from scratch
+./scripts/start-api.sh --create
+
+# Start database only (for external API development)
+./scripts/start-api.sh --db-only
 ```
 
 **Features:**
-- Automatically detects if podman-compose is available
-- Falls back to direct podman commands if needed
-- Handles existing containers gracefully
+- Uses podman-compose for orchestration
+- Handles container dependencies gracefully
 - **Automatically creates `timeforing_user` with proper privileges**
-- **Works from scratch - no manual database setup required**
+- **Builds and deploys API container automatically**
+- **Works from scratch - no manual setup required**
 - Verifies database connectivity
-- Uses the same image and configuration as manually created containers
+- Configures container networking
 
 **Automated Setup:**
 The script automatically:
-1. Waits for Oracle database to be fully ready
-2. Creates the `timeforing_user` if it doesn't exist
-3. Grants necessary privileges (CONNECT, RESOURCE, CREATE TABLE, etc.)
-4. Verifies the setup by testing connection
+1. Builds Spring Boot API Docker image
+2. Waits for Oracle database to be fully ready
+3. Creates the `timeforing_user` if `--create` is used
+4. Grants necessary privileges (CONNECT, RESOURCE, CREATE TABLE, etc.)
+5. Starts API container with proper database connection
+6. Verifies the setup by testing connection
 
-### stop-database.sh
+### stop-api.sh
 
-Stops the Oracle XE database container.
+Stops the Oracle XE database and API containers.
 
 ```bash
-# Stop database container
-./scripts/stop-database.sh
+# Stop all services
+./scripts/stop-api.sh
 
-# Stop and remove container + volume
-./scripts/stop-database.sh --remove
+# Stop database only
+./scripts/stop-api.sh --db
+
+# Stop API only
+./scripts/stop-api.sh --api
+```
+
+### view-logs.sh
+
+View logs from running containers.
+
+```bash
+# View API logs
+./scripts/view-logs.sh
+
+# View database logs
+./scripts/view-logs.sh --db
+
+# Follow logs in real-time
+./scripts/view-logs.sh --follow
 ```
 
 ## Container Configuration
 
-- **Container Name**: `timeforing-oracle`
+- **Database Container**: `timeforing-oracle`
+- **API Container**: `timeforing-api`
 - **Image**: `container-registry.oracle.com/database/express:latest`
 - **Ports**: 
   - 1521 (Oracle TNS listener)
   - 5500 (Oracle Enterprise Manager)
+  - 8080 (Spring Boot API)
 - **Database**: XEPDB1 (Pluggable Database)
 - **User**: `timeforing_user` / `TimeTrack123`
-- **Volume**: `oracle-data` (persistent storage)
+- **Volumes**: `oracle-data` (persistent storage), `api-logs` (API logs)
 
 ## Connection Details
 
-Once the database is running, you can connect using:
+Once the services are running, you can access:
 
+**Database:**
 - **JDBC URL**: `jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XEPDB1)))`
 - **Username**: `timeforing_user`
 - **Password**: `TimeTrack123`
 - **Service**: `XEPDB1`
 
+**API:**
+- **URL**: `http://localhost:8080`
+- **Health Check**: `http://localhost:8080/actuator/health`
+- **API Documentation**: `http://localhost:8080/swagger-ui.html`
+
 ## Troubleshooting
 
 If the scripts fail:
 
-1. **Check Podman status**: `podman ps`
-2. **Check container logs**: `podman logs timeforing-oracle`
-3. **Manual connection test**: 
+1. **Check container status**: `podman ps`
+2. **Check container logs**: 
+   ```bash
+   podman logs timeforing-oracle
+   podman logs timeforing-api
+   ```
+3. **Manual database connection test**: 
    ```bash
    podman exec timeforing-oracle sqlplus timeforing_user/TimeTrack123@localhost:1521/XEPDB1
    ```
+4. **Manual API test**:
+   ```bash
+   curl http://localhost:8080/actuator/health
+   ```
 
-## Docker Compose Alternative
+## Podman Compose Configuration
 
 A `docker-compose.yml` file is provided for environments with podman-compose support:
 

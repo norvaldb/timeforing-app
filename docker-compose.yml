@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  oracle:
+  oracledb:
     image: container-registry.oracle.com/database/express:latest
     container_name: timeforing-oracle
     ports:
@@ -17,6 +17,40 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    networks:
+      - timeforing-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: timeforing-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=oracledb)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XEPDB1)))
+      - SPRING_DATASOURCE_USERNAME=timeforing_user
+      - SPRING_DATASOURCE_PASSWORD=TimeTrack123
+    volumes:
+      - api-logs:/app/logs
+    depends_on:
+      oracledb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    networks:
+      - timeforing-network
+    restart: unless-stopped
 
 volumes:
   oracle-data:
+  api-logs:
+
+networks:
+  timeforing-network:
+    driver: bridge

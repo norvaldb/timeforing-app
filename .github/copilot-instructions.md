@@ -121,18 +121,25 @@ class SecurityConfig {
 
 ### Automated Setup (Use This!)
 ```bash
-# Start Oracle XE database with automated user creation
-./scripts/start-database.sh
+# Start API and database with automated user creation
+./scripts/start-api.sh
 
-# Start fresh (removes all data)
-./scripts/start-database.sh --recreate
+# Start fresh (removes all data and recreates)
+./scripts/start-api.sh --create
 
-# Stop database
-./scripts/stop-database.sh
+# Start database only (for external API development)
+./scripts/start-api.sh --db-only
+
+# Stop all services
+./scripts/stop-api.sh
+
+# View logs
+./scripts/view-logs.sh
 ```
 
 **Important**: Always use the automated scripts instead of manual container commands. The scripts handle:
 - Oracle XE 21c container management via podman-compose
+- Spring Boot API containerized deployment
 - Automatic `timeforing_user` creation with proper privileges
 - Database health verification and connectivity testing
 - Persistent volume management

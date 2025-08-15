@@ -1,13 +1,15 @@
 #!/bin/bash
 
 # =============================================================================
-# Database Startup Script for Timeforing App
+# API and Database Startup Script for Timeforing App
 # =============================================================================
-# Simple script using podman-compose to start Oracle database
+# Script using podman-compose to start Oracle database and Spring Boot API
 #
 # Usage: 
-#   ./scripts/start-database.sh        - Start database (normal)
-#   ./scripts/start-database.sh --create - Recreate database volume and user
+#   ./scripts/start-api.sh                   - Start both database and API (default)
+#   ./scripts/start-api.sh --create          - Recreate database volume and user, then start both
+#   ./scripts/start-api.sh --db-only         - Start database only (for external API development)
+#   ./scripts/start-api.sh --rebuild         - Force rebuild of API image and start both
 # =============================================================================
 
 set -e
@@ -24,43 +26,82 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+# Handle command line options
+START_API=true  # Default to starting both services
+SHOULD_CREATE_USER=false
+FORCE_REBUILD=false
+
+for arg in "$@"; do
+    case $arg in
+        --create)
+            SHOULD_CREATE_USER=true
+            ;;
+        --db-only)
+            START_API=false
+            ;;
+        --rebuild)
+            FORCE_REBUILD=true
+            ;;
+        *)
+            log_error "Unknown option: $arg"
+            echo "Usage: $0 [--create] [--db-only] [--rebuild]"
+            exit 1
+            ;;
+    esac
+done
+
 # Handle create option
-if [ "$1" = "--create" ]; then
+if [ "$SHOULD_CREATE_USER" = true ]; then
     log_info "Recreating database container and volume..."
     
-    # Check if container is running and stop it
-    if podman ps --format "{{.Names}}" | grep -q "timeforing-oracle"; then
-        log_info "Stopping running timeforing-oracle container..."
-        podman-compose down
-    fi
+    # Stop all services
+    log_info "Stopping all services..."
+    podman-compose down
     
-    # Check if stopped container exists and remove it
+    # Check if stopped containers exist and remove them
     if podman ps -a --format "{{.Names}}" | grep -q "timeforing-oracle"; then
         log_info "Removing existing timeforing-oracle container..."
         podman container rm timeforing-oracle 2>/dev/null || true
     fi
     
-    # Check if volume exists and remove it
+    if podman ps -a --format "{{.Names}}" | grep -q "timeforing-api"; then
+        log_info "Removing existing timeforing-api container..."
+        podman container rm timeforing-api 2>/dev/null || true
+    fi
+    
+    # Check if volumes exist and remove them
     if podman volume ls --format "{{.Name}}" | grep -q "timeforing-app_oracle-data"; then
         log_info "Removing existing Oracle data volume..."
         podman volume rm timeforing-app_oracle-data 2>/dev/null || true
     fi
     
+    if podman volume ls --format "{{.Name}}" | grep -q "timeforing-app_api-logs"; then
+        log_info "Removing existing API logs volume..."
+        podman volume rm timeforing-app_api-logs 2>/dev/null || true
+    fi
+    
     # Remove any lingering networks
-    if podman network ls --format "{{.Name}}" | grep -q "timeforing-app_default"; then
+    if podman network ls --format "{{.Name}}" | grep -q "timeforing-app_timeforing-network"; then
         log_info "Removing existing network..."
-        podman network rm timeforing-app_default 2>/dev/null || true
+        podman network rm timeforing-app_timeforing-network 2>/dev/null || true
     fi
     
     log_success "Cleanup completed successfully"
-    SHOULD_CREATE_USER=true
-else
-    SHOULD_CREATE_USER=false
 fi
 
-# Start database
-log_info "Starting Oracle database..."
-podman-compose up -d
+# Start services
+if [ "$START_API" = true ]; then
+    if [ "$FORCE_REBUILD" = true ]; then
+        log_info "Starting Oracle database and API with forced rebuild..."
+        podman-compose up -d --build --force-recreate
+    else
+        log_info "Starting Oracle database and API..."
+        podman-compose up -d --build
+    fi
+else
+    log_info "Starting Oracle database only..."
+    podman-compose up -d oracle
+fi
 
 # Wait for Oracle to be fully ready
 wait_for_oracle() {
@@ -140,7 +181,7 @@ if [ "$SHOULD_CREATE_USER" = true ]; then
     fi
 fi
 
-log_success "Database startup completed!"
+log_success "Services startup completed!"
 if [ "$SHOULD_CREATE_USER" = true ]; then
     echo ""
     echo "Database connection details:"
@@ -148,4 +189,15 @@ if [ "$SHOULD_CREATE_USER" = true ]; then
     echo "User: timeforing_user"
     echo "Password: TimeTrack123"
     echo "Schema: TIMEFORING_USER"
+fi
+
+if [ "$START_API" = true ]; then
+    echo ""
+    echo "API Service Details:"
+    echo "URL: http://localhost:8080"
+    echo "Health Check: http://localhost:8080/actuator/health"
+    echo "API Documentation: http://localhost:8080/swagger-ui.html"
+    echo ""
+    echo "To view API logs: podman logs -f timeforing-api"
+    echo "To view database logs: podman logs -f timeforing-oracle"
 fi

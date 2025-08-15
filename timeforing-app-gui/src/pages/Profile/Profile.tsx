@@ -81,6 +81,22 @@ export const Profile: React.FC = () => {
     setIsEditing(true);
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Er du sikker på at du vil slette kontoen din? Denne handlingen kan ikke angres.'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      await userService.deleteAccount();
+      notification.success('slettet');
+      // In a real app, this would typically redirect to login or home page
+    } catch (error: unknown) {
+      notification.error('noeGikkGalt');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -270,7 +286,7 @@ export const Profile: React.FC = () => {
                     Permanent slett din konto og alle data
                   </p>
                 </div>
-                <Button variant="destructive" size="sm">
+                <Button variant="destructive" size="sm" onClick={handleDeleteAccount}>
                   Slett
                 </Button>
               </div>

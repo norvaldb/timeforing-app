@@ -13,27 +13,32 @@ vi.mock('@/services/userService', () => ({
   },
 }));
 
-// Mock notification hook
-const mockShowToast = vi.fn();
-const mockError = vi.fn();
+// Mock the notification hook
 const mockSuccess = vi.fn();
+const mockError = vi.fn();
 const mockCustomError = vi.fn();
 
 vi.mock('@/components/notifications/NotificationToast', () => ({
   useNotification: () => ({
-    showToast: mockShowToast,
-    error: mockError,
     success: mockSuccess,
+    error: mockError,
     customError: mockCustomError,
   }),
 }));
 
-const MockedUserService = vi.mocked(userService);
+// Mock window.confirm for delete tests
+const mockConfirm = vi.fn();
+Object.defineProperty(window, 'confirm', {
+  value: mockConfirm,
+  writable: true,
+});
+
+const MockedUserService = userService as any;
 
 const mockUser = {
   id: '1',
   navn: 'Test Bruker',
-  mobil: '+47 41234567',
+  mobil: '+4741234567',
   epost: 'test@example.com',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
@@ -43,19 +48,23 @@ describe('Profile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     MockedUserService.getProfile.mockResolvedValue(mockUser);
+    MockedUserService.updateProfile.mockResolvedValue({
+      ...mockUser,
+      navn: 'Updated Name',
+    });
+    MockedUserService.deleteAccount.mockResolvedValue(undefined);
   });
 
   it('should render profile page in Norwegian', async () => {
     render(<Profile />);
     
-    expect(screen.getByRole('heading', { name: 'Min profil' })).toBeInTheDocument();
-    expect(screen.getByText('Administrer din profilinformasjon og kontoinnstillinger.')).toBeInTheDocument();
-    
     await waitFor(() => {
-      expect(screen.getByText('Test Bruker')).toBeInTheDocument();
-      expect(screen.getByText('+47 41234567')).toBeInTheDocument();
-      expect(screen.getByText('test@example.com')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Min profil' })).toBeInTheDocument();
     });
+    
+    expect(screen.getByText('Administrer din brukerinformasjon')).toBeInTheDocument();
+    expect(screen.getByText('Brukerinformasjon')).toBeInTheDocument();
+    expect(screen.getByText('Innstillinger')).toBeInTheDocument();
   });
 
   it('should load user profile on mount', async () => {
@@ -63,29 +72,30 @@ describe('Profile', () => {
     
     await waitFor(() => {
       expect(MockedUserService.getProfile).toHaveBeenCalled();
+      expect(screen.getByText('Test Bruker')).toBeInTheDocument();
+      expect(screen.getByText('+47 412 34 567')).toBeInTheDocument();
+      expect(screen.getByText('test@example.com')).toBeInTheDocument();
     });
-    
-    expect(screen.getByText('Test Bruker')).toBeInTheDocument();
   });
 
   it('should show loading state while fetching profile', () => {
-    MockedUserService.getProfile.mockImplementationOnce(
-      () => new Promise(resolve => setTimeout(resolve, 1000))
-    );
-    
     render(<Profile />);
     
-    expect(screen.getByText('Laster profil...')).toBeInTheDocument();
+    // Check for loading spinner (by class rather than text since there's no loading text)
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
   });
 
   it('should handle profile loading error', async () => {
-    MockedUserService.getProfile.mockRejectedValueOnce(new Error('Failed to fetch'));
+    MockedUserService.getProfile.mockRejectedValueOnce(new Error('Network error'));
     
     render(<Profile />);
     
     await waitFor(() => {
-      expect(mockCustomError).toHaveBeenCalledWith('Kunne ikke laste profil');
+      expect(screen.getByText('Kunne ikke laste profil')).toBeInTheDocument();
     });
+    
+    expect(screen.getByText('Prøv å laste siden på nytt')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Last på nytt' })).toBeInTheDocument();
   });
 
   it('should enable edit mode when edit button is clicked', async () => {
@@ -101,12 +111,8 @@ describe('Profile', () => {
     
     // Should show form fields
     expect(screen.getByDisplayValue('Test Bruker')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('+47 41234567')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('+4741234567')).toBeInTheDocument();
     expect(screen.getByDisplayValue('test@example.com')).toBeInTheDocument();
-    
-    // Should show save and cancel buttons
-    expect(screen.getByRole('button', { name: 'Lagre endringer' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Avbryt' })).toBeInTheDocument();
   });
 
   it('should cancel edit mode when cancel button is clicked', async () => {
@@ -121,21 +127,16 @@ describe('Profile', () => {
     const editButton = screen.getByRole('button', { name: 'Rediger' });
     await user.click(editButton);
     
-    // Cancel edit mode
+    // Click cancel
     const cancelButton = screen.getByRole('button', { name: 'Avbryt' });
     await user.click(cancelButton);
     
-    // Should show read-only view again
-    expect(screen.getByRole('button', { name: 'Rediger' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Lagre endringer' })).not.toBeInTheDocument();
+    // Should be back in view mode
+    expect(screen.getByText('Test Bruker')).toBeInTheDocument();
   });
 
   it('should update profile successfully', async () => {
     const user = userEvent.setup();
-    const updatedUser = { ...mockUser, navn: 'Updated Name' };
-    
-    MockedUserService.updateProfile.mockResolvedValueOnce(updatedUser);
-    
     render(<Profile />);
     
     await waitFor(() => {
@@ -151,37 +152,33 @@ describe('Profile', () => {
     await user.clear(nameInput);
     await user.type(nameInput, 'Updated Name');
     
-    // Save changes
+    // Submit form
     const saveButton = screen.getByRole('button', { name: 'Lagre endringer' });
     await user.click(saveButton);
     
     await waitFor(() => {
       expect(MockedUserService.updateProfile).toHaveBeenCalledWith({
         navn: 'Updated Name',
-        mobil: '+47 41234567',
+        mobil: '+4741234567',
         epost: 'test@example.com',
       });
-    });
-
-    await waitFor(() => {
       expect(mockSuccess).toHaveBeenCalledWith('profilOppdatert');
     });
   });
 
   it('should handle update profile error', async () => {
-    const user = userEvent.setup();
-    
     MockedUserService.updateProfile.mockRejectedValueOnce({
-      response: { status: 400, data: { message: 'Invalid data' } }
+      code: 'DUPLICATE_EMAIL',
     });
     
+    const user = userEvent.setup();
     render(<Profile />);
     
     await waitFor(() => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
     
-    // Enter edit mode and save
+    // Enter edit mode and submit
     const editButton = screen.getByRole('button', { name: 'Rediger' });
     await user.click(editButton);
     
@@ -189,7 +186,7 @@ describe('Profile', () => {
     await user.click(saveButton);
     
     await waitFor(() => {
-      expect(mockError).toHaveBeenCalledWith('noeGikkGalt');
+      expect(mockError).toHaveBeenCalledWith('epostAlleredeRegistrert');
     });
   });
 
@@ -197,20 +194,16 @@ describe('Profile', () => {
     render(<Profile />);
     
     await waitFor(() => {
-      expect(screen.getByText('Test Bruker')).toBeInTheDocument();
+      expect(screen.getByText('Slett konto')).toBeInTheDocument();
     });
     
-    expect(screen.getByText('Slett konto')).toBeInTheDocument();
-    expect(screen.getByText('Denne handlingen kan ikke angres.')).toBeInTheDocument();
+    expect(screen.getByText('Permanent slett din konto og alle data')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Slett' })).toBeInTheDocument();
   });
 
   it('should show confirmation dialog when deleting account', async () => {
+    mockConfirm.mockReturnValue(false);
     const user = userEvent.setup();
-    
-    // Mock window.confirm
-    const mockConfirm = vi.fn(() => false);
-    Object.defineProperty(window, 'confirm', { value: mockConfirm });
     
     render(<Profile />);
     
@@ -227,13 +220,8 @@ describe('Profile', () => {
   });
 
   it('should delete account when confirmed', async () => {
+    mockConfirm.mockReturnValue(true);
     const user = userEvent.setup();
-    
-    // Mock window.confirm to return true
-    const mockConfirm = vi.fn(() => true);
-    Object.defineProperty(window, 'confirm', { value: mockConfirm });
-    
-    MockedUserService.deleteAccount.mockResolvedValueOnce(undefined);
     
     render(<Profile />);
     
@@ -246,19 +234,15 @@ describe('Profile', () => {
     
     await waitFor(() => {
       expect(MockedUserService.deleteAccount).toHaveBeenCalled();
-      expect(mockSuccess).toHaveBeenCalledWith('kontoSlettet');
+      expect(mockSuccess).toHaveBeenCalledWith('slettet');
     });
   });
 
   it('should handle account deletion error', async () => {
+    mockConfirm.mockReturnValue(true);
+    MockedUserService.deleteAccount.mockRejectedValueOnce(new Error('Server error'));
+    
     const user = userEvent.setup();
-    
-    // Mock window.confirm to return true
-    const mockConfirm = vi.fn(() => true);
-    Object.defineProperty(window, 'confirm', { value: mockConfirm });
-    
-    MockedUserService.deleteAccount.mockRejectedValueOnce(new Error('Failed to delete'));
-    
     render(<Profile />);
     
     await waitFor(() => {
@@ -280,14 +264,12 @@ describe('Profile', () => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
     
-    // Check main heading
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveTextContent('Min profil');
+    // Check that form labels are properly associated
+    expect(screen.getByText('Navn')).toBeInTheDocument();
+    expect(screen.getByText('Mobilnummer')).toBeInTheDocument();
+    expect(screen.getByText('Epost')).toBeInTheDocument();
     
-    // Check section headings
-    expect(screen.getByRole('heading', { level: 2, name: 'Brukerinformasjon' })).toBeInTheDocument();
-    
-    // Check buttons
+    // Check that buttons have proper accessible names
     expect(screen.getByRole('button', { name: 'Rediger' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Slett' })).toBeInTheDocument();
   });

@@ -34,6 +34,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className
           )}
           ref={ref}
+          required={required}
+          aria-required={required ? 'true' : 'false'}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? errorId : undefined}
           {...props}

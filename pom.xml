@@ -316,6 +316,9 @@
                     <includes>
                         <include>**/*IT</include>
                     </includes>
+                    <excludes>
+                        <exclude>**/*Test</exclude>
+                    </excludes>
                     <systemPropertyVariables>
                         <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
                         <kotest.framework.classpath.scanning.autoscan.disable>true</kotest.framework.classpath.scanning.autoscan.disable>

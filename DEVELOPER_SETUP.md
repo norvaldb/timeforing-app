@@ -470,3 +470,52 @@ If all commands succeed, your development environment is ready! 🎉
 ---
 
 **Need Help?** Check the troubleshooting section above or create an issue in the repository.
+
+---
+
+## 🐳 Using Podman for Testcontainers (Docker Replacement)
+
+If you do not have Docker installed, you can use Podman as a drop-in replacement for Testcontainers-based integration tests. Podman provides a Docker-compatible API socket that Testcontainers can use.
+
+### 1. Enable and Start the Podman Docker Socket (User Service)
+```sh
+systemctl --user enable --now podman.socket
+```
+
+### 2. (Optional) Enable Lingering for User Services
+This allows the Podman socket to start even when you are not logged in:
+```sh
+loginctl enable-linger $USER
+```
+
+### 3. (Alternative) Start Podman TCP Socket Manually
+If you prefer a TCP socket (for WSL or remote use):
+```sh
+podman system service --time=0 tcp:127.0.0.1:2375 &
+export DOCKER_HOST=tcp://127.0.0.1:2375
+```
+
+### 4. Set the Docker Host Environment Variable
+If using the TCP socket, set this in your shell (e.g., add to `~/.zshrc` or `~/.bashrc`):
+```sh
+export DOCKER_HOST=tcp://127.0.0.1:2375
+```
+
+### 5. Verify Podman Docker API (Optional)
+You can install the `docker` CLI for convenience, but it is not required for Testcontainers:
+```sh
+sudo apt update && sudo apt install docker.io
+# Then test:
+docker info
+```
+
+### 6. Run Integration Tests
+Testcontainers will now use Podman as the backend:
+```sh
+mvn test -Dtest=ProjectControllerIntegrationTest
+```
+
+**Note:**
+- You do NOT need Docker Desktop or the Docker daemon for Testcontainers if Podman is set up as above.
+- Podman must be installed with Docker API support (most modern Podman installations have this).
+- If you use WSL, ensure the Podman socket is accessible from your WSL environment.

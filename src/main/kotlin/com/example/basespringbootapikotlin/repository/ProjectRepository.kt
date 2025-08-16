@@ -1,0 +1,82 @@
+package com.example.basespringbootapikotlin.repository
+
+import com.example.basespringbootapikotlin.model.Project
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.core.RowMapper
+import org.springframework.stereotype.Repository
+import java.sql.ResultSet
+import java.time.LocalDateTime
+
+@Repository
+class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
+    private val rowMapper = RowMapper { rs: ResultSet, _: Int ->
+        Project(
+            projectId = rs.getLong("project_id"),
+            userId = rs.getLong("user_id"),
+            navn = rs.getString("navn"),
+            beskrivelse = rs.getString("beskrivelse"),
+            aktiv = rs.getInt("aktiv") == 1,
+            opprettetDato = rs.getTimestamp("opprettet_dato").toLocalDateTime(),
+            endretDato = rs.getTimestamp("endret_dato").toLocalDateTime()
+        )
+    }
+
+    fun save(project: Project): Project {
+        val keyHolder = org.springframework.jdbc.support.GeneratedKeyHolder()
+        jdbcTemplate.update({ connection ->
+            val ps = connection.prepareStatement(
+                "INSERT INTO projects (user_id, navn, beskrivelse, aktiv, opprettet_dato, endret_dato) VALUES (?, ?, ?, ?, ?, ?)",
+                arrayOf("project_id")
+            )
+            ps.setLong(1, project.userId)
+            ps.setString(2, project.navn)
+            ps.setString(3, project.beskrivelse)
+            ps.setInt(4, if (project.aktiv) 1 else 0)
+            ps.setTimestamp(5, java.sql.Timestamp.valueOf(project.opprettetDato))
+            ps.setTimestamp(6, java.sql.Timestamp.valueOf(project.endretDato))
+            ps
+        }, keyHolder)
+        val id = keyHolder.key?.toLong() ?: 0L
+        return project.copy(projectId = id)
+    }
+
+    fun findByIdAndUser(projectId: Long, userId: Long): Project? =
+        jdbcTemplate.query(
+            "SELECT * FROM projects WHERE project_id = ? AND user_id = ? AND aktiv = 1",
+            rowMapper,
+            projectId, userId
+        ).firstOrNull()
+
+    fun findAllByUser(userId: Long, page: Int, pageSize: Int, sort: String = "navn", asc: Boolean = true): List<Project> =
+        jdbcTemplate.query(
+            "SELECT * FROM projects WHERE user_id = ? AND aktiv = 1 ORDER BY $sort ${if (asc) "ASC" else "DESC"} OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
+            rowMapper,
+            userId, (page - 1) * pageSize, pageSize
+        )
+
+    fun countByUser(userId: Long): Long =
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM projects WHERE user_id = ? AND aktiv = 1",
+            Long::class.java,
+            userId
+        ) ?: 0
+
+    fun update(project: Project): Boolean =
+        jdbcTemplate.update(
+            "UPDATE projects SET navn = ?, beskrivelse = ?, endret_dato = ? WHERE project_id = ? AND user_id = ?",
+            project.navn, project.beskrivelse, project.endretDato, project.projectId, project.userId
+        ) > 0
+
+    fun softDelete(projectId: Long, userId: Long): Boolean =
+        jdbcTemplate.update(
+            "UPDATE projects SET aktiv = 0, endret_dato = ? WHERE project_id = ? AND user_id = ?",
+            LocalDateTime.now(), projectId, userId
+        ) > 0
+
+    fun existsWithTimeregistrering(projectId: Long): Boolean =
+        (jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM time_entries WHERE prosjekt_id = ?",
+            Long::class.java,
+            projectId
+        ) ?: 0L) > 0
+}

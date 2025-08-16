@@ -14,6 +14,29 @@ import java.time.LocalDateTime
  */
 @ControllerAdvice
 class GlobalExceptionHandler {
+
+    @ExceptionHandler(IllegalStateException::class)
+    fun handleIllegalStateException(
+        ex: IllegalStateException,
+        request: WebRequest
+    ): ResponseEntity<ErrorResponse> {
+        val status = when (ex.message) {
+            "Kan ikke slette prosjekt med registrerte timer" -> HttpStatus.CONFLICT
+            else -> HttpStatus.CONFLICT
+        }
+        val code = when (ex.message) {
+            "Kan ikke slette prosjekt med registrerte timer" -> "PROJECT_HAS_TIME_ENTRIES"
+            else -> "CONFLICT"
+        }
+        val errorResponse = ErrorResponse(
+            message = ex.message ?: "Konflikt",
+            code = code,
+            status = status.value(),
+            timestamp = LocalDateTime.now(),
+            path = request.getDescription(false)
+        )
+        return ResponseEntity.status(status).body(errorResponse)
+    }
     
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidationExceptions(

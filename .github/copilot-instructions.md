@@ -28,9 +28,6 @@
 - **Responsive Design**: Mobile-first with dark mode support
 
 ## Key Standards
-
-### Code Structure
-```
 src/main/kotlin/
 ├── controller/     # @RestController - HTTP endpoints
 ├── facade/         # @Service @Transactional - business logic orchestration  
@@ -39,7 +36,32 @@ src/main/kotlin/
 ├── dto/            # data classes for API contracts
 ├── config/         # @Configuration classes
 └── exception/      # custom exceptions + @ControllerAdvice
+
+### Feature-based Code Structure (2025)
 ```
+src/main/kotlin/com/example/basespringbootapikotlin/feature/
+    ├── user/      # All user-related code: controller, facade, repository, model, dto, etc.
+    ├── project/   # All project-related code: controller, facade, repository, model, dto, etc.
+    └── ...        # (Add more features as needed)
+```
+
+Each feature folder contains all files for that feature (no subpackages per layer). Example:
+```
+src/main/kotlin/com/example/basespringbootapikotlin/feature/user/
+    UserController.kt
+    UserFacade.kt
+    UserFacadeImpl.kt
+    UserRepository.kt
+    User.kt
+    UserDto.kt
+    UserProfileDtos.kt
+    RegisterUserRequest.kt
+    ...
+```
+
+Test code follows the same structure under `src/test/kotlin/com/example/basespringbootapikotlin/feature/`.
+
+**Note:** All package declarations and imports use `com.example.basespringbootapikotlin.feature.<feature>`.
 
 ### Kotlin & Spring Conventions
 - **Naming**: PascalCase classes, camelCase functions, UPPER_SNAKE_CASE constants

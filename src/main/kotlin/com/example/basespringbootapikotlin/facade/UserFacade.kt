@@ -1,8 +1,8 @@
 package com.example.basespringbootapikotlin.facade
 
-import com.example.basespringbootapikotlin.dto.CreateUserRequest
-import com.example.basespringbootapikotlin.dto.UpdateUserRequest
-import com.example.basespringbootapikotlin.dto.UserDto
+import com.example.basespringbootapikotlin.dto.RegisterUserRequest
+import com.example.basespringbootapikotlin.dto.UpdateUserProfileRequest
+import com.example.basespringbootapikotlin.dto.UserProfileDto
 import com.example.basespringbootapikotlin.model.User
 import com.example.basespringbootapikotlin.repository.UserRepository
 import org.springframework.stereotype.Service
@@ -10,13 +10,12 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.format.DateTimeFormatter
 
 interface UserFacade {
-    fun createUser(request: CreateUserRequest): UserDto
-    fun findUserById(id: Long): UserDto?
-    fun updateUser(id: Long, request: UpdateUserRequest): UserDto
-    fun deleteUser(id: Long): Boolean
-    fun findUserByEpost(epost: String): UserDto?
+    fun registerUser(request: RegisterUserRequest): UserProfileDto
+    fun getProfile(id: Long): UserProfileDto?
+    fun updateProfile(id: Long, request: UpdateUserProfileRequest): UserProfileDto
+    fun deleteProfile(id: Long): Boolean
+    fun findUserByEpost(epost: String): UserProfileDto?
     fun isEmailAvailable(epost: String): Boolean
-    fun getAllUsers(limit: Int = 100, offset: Int = 0): List<UserDto>
 }
 
 @Service
@@ -25,61 +24,46 @@ class UserFacadeImpl(
     private val userRepository: UserRepository
 ) : UserFacade {
     
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    // Removed dateFormatter as it's not needed for user profile endpoints
     
-    override fun createUser(request: CreateUserRequest): UserDto {
-        // Check if email is already taken
+    override fun registerUser(request: RegisterUserRequest): UserProfileDto {
         if (userRepository.existsByEpost(request.epost)) {
             throw IllegalArgumentException("Epost addressen er allerede registrert")
         }
-        
         val user = User(
             navn = request.navn.trim(),
             mobil = request.mobil.trim(),
             epost = request.epost.trim().lowercase()
         )
-        
         val savedUser = userRepository.save(user)
-        return savedUser.toDto()
+        return savedUser.toProfileDto()
     }
     
     @Transactional(readOnly = true)
-    override fun findUserById(id: Long): UserDto? {
-        return userRepository.findById(id)?.toDto()
+    override fun getProfile(id: Long): UserProfileDto? {
+        return userRepository.findById(id)?.toProfileDto()
     }
     
-    override fun updateUser(id: Long, request: UpdateUserRequest): UserDto {
+    override fun updateProfile(id: Long, request: UpdateUserProfileRequest): UserProfileDto {
         val existingUser = userRepository.findById(id)
             ?: throw IllegalArgumentException("Bruker ikke funnet")
-        
-        // Check email availability if email is being changed
-        request.epost?.let { newEmail ->
-            if (newEmail.lowercase() != existingUser.epost && 
-                userRepository.existsByEpost(newEmail)) {
-                throw IllegalArgumentException("Epost addressen er allerede registrert")
-            }
-        }
-        
         val updatedUser = existingUser.copy(
-            navn = request.navn?.trim() ?: existingUser.navn,
-            mobil = request.mobil?.trim() ?: existingUser.mobil,
-            epost = request.epost?.trim()?.lowercase() ?: existingUser.epost
+            navn = request.navn.trim(),
+            mobil = request.mobil.trim()
         )
-        
         val savedUser = userRepository.save(updatedUser)
-        return savedUser.toDto()
+        return savedUser.toProfileDto()
     }
     
-    override fun deleteUser(id: Long): Boolean {
+    override fun deleteProfile(id: Long): Boolean {
         val user = userRepository.findById(id)
             ?: throw IllegalArgumentException("Bruker ikke funnet")
-        
         return userRepository.delete(id)
     }
     
     @Transactional(readOnly = true)
-    override fun findUserByEpost(epost: String): UserDto? {
-        return userRepository.findByEpost(epost)?.toDto()
+    override fun findUserByEpost(epost: String): UserProfileDto? {
+        return userRepository.findByEpost(epost)?.toProfileDto()
     }
     
     @Transactional(readOnly = true)
@@ -87,20 +71,15 @@ class UserFacadeImpl(
         return !userRepository.existsByEpost(epost)
     }
     
-    @Transactional(readOnly = true)
-    override fun getAllUsers(limit: Int, offset: Int): List<UserDto> {
-        return userRepository.findAll(limit, offset).map { it.toDto() }
-    }
+    // No getAllUsers for profile endpoints
     
     /**
-     * Convert User entity to UserDto
+     * Convert User entity to UserProfileDto
      */
-    private fun User.toDto(): UserDto = UserDto(
-        id = this.userId.toString(),
+    private fun User.toProfileDto(): UserProfileDto = UserProfileDto(
+        id = this.userId,
         navn = this.navn,
         mobil = this.mobil,
-        epost = this.epost,
-        createdAt = this.opprettetDato.format(dateFormatter),
-        updatedAt = this.sistEndret.format(dateFormatter)
+        epost = this.epost
     )
 }

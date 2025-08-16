@@ -25,8 +25,9 @@ class SecurityConfig {
             .authorizeHttpRequests { authz ->
                 authz
                     .requestMatchers(
-                        "/actuator/health", 
-                        "/swagger-ui/**", 
+                        "/actuator/health",
+                        "/swagger-ui.html",
+                        "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/api/users/register",
                         "/api/users/check-email"

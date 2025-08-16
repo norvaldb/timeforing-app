@@ -30,7 +30,7 @@ class UserRepository(private val jdbcTemplate: JdbcTemplate) {
             """
             SELECT user_id, navn, mobil, epost, status, opprettet_dato, sist_endret, version
             FROM users 
-            WHERE user_id = ?
+            WHERE user_id = ? AND deleted = 0
             """,
             userRowMapper,
             id
@@ -44,7 +44,7 @@ class UserRepository(private val jdbcTemplate: JdbcTemplate) {
             """
             SELECT user_id, navn, mobil, epost, status, opprettet_dato, sist_endret, version
             FROM users 
-            WHERE epost = ?
+            WHERE epost = ? AND deleted = 0
             """,
             userRowMapper,
             epost.lowercase()
@@ -55,7 +55,7 @@ class UserRepository(private val jdbcTemplate: JdbcTemplate) {
     
     fun existsByEpost(epost: String): Boolean {
         val count = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM users WHERE epost = ?",
+            "SELECT COUNT(*) FROM users WHERE epost = ? AND deleted = 0",
             Long::class.java,
             epost.lowercase()
         )
@@ -127,8 +127,8 @@ class UserRepository(private val jdbcTemplate: JdbcTemplate) {
     }
     
     fun delete(id: Long): Boolean {
-        val rowsDeleted = jdbcTemplate.update("DELETE FROM users WHERE user_id = ?", id)
-        return rowsDeleted > 0
+    val rowsUpdated = jdbcTemplate.update("UPDATE users SET deleted = 1 WHERE user_id = ? AND deleted = 0", id)
+    return rowsUpdated > 0
     }
     
     fun findAll(limit: Int = 100, offset: Int = 0): List<User> {
@@ -136,6 +136,7 @@ class UserRepository(private val jdbcTemplate: JdbcTemplate) {
             """
             SELECT user_id, navn, mobil, epost, status, opprettet_dato, sist_endret, version
             FROM users 
+            WHERE deleted = 0
             ORDER BY opprettet_dato DESC
             LIMIT ? OFFSET ?
             """,

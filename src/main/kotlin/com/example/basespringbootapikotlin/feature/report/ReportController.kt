@@ -21,7 +21,11 @@ class ReportController(private val reportService: ReportService) {
         @RequestParam(required = false, name = "project_id") projectId: Long?
     ): ResponseEntity<ByteArray> {
         val userSub = jwt.claims["sub"] as String
-        val bytes = reportService.generateExcel(userSub, from, to, projectId)
+        // Attempt to read name/email from JWT claims; fall back to subject only
+        val reporterName = jwt.claims["name"] as? String
+        val reporterEmail = jwt.claims["email"] as? String
+
+        val bytes = reportService.generateExcel(userSub, reporterName, reporterEmail, from, to, projectId)
 
         val filename = "time-report-${System.currentTimeMillis()}.xlsx"
         return ResponseEntity.ok()

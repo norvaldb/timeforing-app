@@ -4,6 +4,11 @@ spring:
     username: timeforing_user
     password: TimeTrack123
     driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      validation-timeout: 25000
+      connection-timeout: 30000
+      max-lifetime: 60000
+      initialization-fail-timeout: 0
   flyway:
     enabled: true
     locations: classpath:db/migration

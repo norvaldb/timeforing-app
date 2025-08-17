@@ -31,7 +31,8 @@ class SecurityConfig {
                         "/v3/api-docs/**",
                         "/api/users/register",
                         "/api/users/check-email",
-                        "/api/mock-auth/token"
+                        "/api/mock-auth/token",
+                        "/test/correlation-id" // Allow anonymous access for integration test
                     ).permitAll()
                     .anyRequest().authenticated()
             }

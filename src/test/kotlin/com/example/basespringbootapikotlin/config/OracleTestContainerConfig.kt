@@ -1,4 +1,4 @@
-package com.example.basespringbootapikotlin.feature.project
+package com.example.basespringbootapikotlin.config
 
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -17,6 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 abstract class OracleTestContainerConfig {
     companion object {
         @Container
+        @JvmStatic
         val oracle: OracleContainer = OracleContainer("gvenzl/oracle-xe:21-slim")
             .withUsername("timeforing_user")
             .withPassword("TimeTrack123")

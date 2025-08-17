@@ -16,6 +16,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.jdbc.core.JdbcTemplate
 
+import com.example.basespringbootapikotlin.config.OracleTestContainerConfig
+
 @SpringBootTest(classes = [TestSecurityConfig::class])
 @AutoConfigureMockMvc
 

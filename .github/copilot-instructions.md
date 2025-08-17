@@ -12,13 +12,14 @@
 ## Implemented Features
 
 ### ✅ Backend API
-- **User Management**: Complete CRUD with Norwegian validation (`/api/users/*`)
 - **Norwegian Localization**: All error messages and validation in Norwegian
 - **Oracle Database**: Containerized Oracle XE with sequence-based ID generation
 - **Security**: OAuth2 JWT with method-level authorization
 - **Documentation**: Interactive Swagger UI at `/swagger-ui.html`
 - **Docker**: Multi-stage builds with automated deployment scripts
 - **Health Monitoring**: Production-ready actuator endpoints
+- **Claim-Driven Authentication**: Stateless, no user table; all user data from JWT claims
+- **Logging**: Structured logging with error handling and monitoring. Use `@Slf4j` for logging in all classes. Use Logback for logging configuration. 
 
 ### ✅ Frontend App  
 - **User Registration**: `/register` with Norwegian UI and validation
@@ -29,30 +30,30 @@
 
 ## Key Standards
 src/main/kotlin/
-├── controller/     # @RestController - HTTP endpoints
-├── facade/         # @Service @Transactional - business logic orchestration  
-├── repository/     # @Repository - data access with JDBCTemplate
-├── model/          # data classes for entities
-├── dto/            # data classes for API contracts
+├── feature/        # Features of the api
+    ├── project/      # All project-related code: controller, facade, repository, model, dto, etc.
+    ├── timeentry/    # All time entry-related code: controller, facade, repository, model, dto, etc.
+    └── ...           # (Add more features as needed)
 ├── config/         # @Configuration classes
 └── exception/      # custom exceptions + @ControllerAdvice
 
 ### Feature-based Code Structure (2025)
 ```
 src/main/kotlin/com/example/basespringbootapikotlin/feature/
-    ├── user/      # All user-related code: controller, facade, repository, model, dto, etc.
+    ├── mockauth/  # All user-related code: controller, facade, repository, model, dto, etc.
     ├── project/   # All project-related code: controller, facade, repository, model, dto, etc.
     └── ...        # (Add more features as needed)
 ```
 
 Each feature folder contains all files for that feature (no subpackages per layer). Example:
 ```
-src/main/kotlin/com/example/basespringbootapikotlin/feature/user/
-    UserController.kt
-    UserFacade.kt
-    UserFacadeImpl.kt
-    UserRepository.kt
-    UserDto.kt
+src/main/kotlin/com/example/basespringbootapikotlin/feature/project/
+        ProjectController.kt
+        ProjectFacade.kt
+        ProjectFacadeImpl.kt
+        ProjectRepository.kt
+        Project.kt
+        ProjectDto.kt
 **Note:** All package declarations and imports use `com.example.basespringbootapikotlin.feature.<feature>`.
 
     ```
@@ -78,26 +79,115 @@ src/main/kotlin/com/example/basespringbootapikotlin/feature/user/
 
 // ...existing code...
 
+---
+
+**See detailed plan for logging and error handling:**
+`dev.docs/issue-16-logging.md`
+
+### Example: ProjectController
+```kotlin
+@RestController
+@RequestMapping("/api/projects")
+class ProjectController(private val projectFacade: ProjectFacade) {
+    @GetMapping
+    fun getAllProjects(@AuthenticationPrincipal jwt: Jwt): List<ProjectDto> =
+        projectFacade.getAllProjects(jwt.subject)
+
+    @PostMapping
+    fun createProject(@RequestBody dto: ProjectDto, @AuthenticationPrincipal jwt: Jwt): ProjectDto =
+        projectFacade.createProject(dto, jwt.subject)
+}
+```
+
+### Example: ProjectFacade & ProjectFacadeImpl
+```kotlin
+interface ProjectFacade {
+    fun getAllProjects(userSub: String): List<ProjectDto>
+    fun createProject(dto: ProjectDto, userSub: String): ProjectDto
+}
+
+@Service
+class ProjectFacadeImpl(private val projectRepository: ProjectRepository) : ProjectFacade {
+    override fun getAllProjects(userSub: String): List<ProjectDto> =
+        projectRepository.findByUserSub(userSub).map { it.toDto() }
+
+    override fun createProject(dto: ProjectDto, userSub: String): ProjectDto {
+        val project = Project(
+            id = null,
+            navn = dto.navn,
+            beskrivelse = dto.beskrivelse,
+            userSub = userSub
+        )
+        return projectRepository.save(project).toDto()
+    }
+}
+```
+
+### Example: Project (Model/Entity)
+```kotlin
+data class Project(
+    val id: Long?,
+    val navn: String,
+    val beskrivelse: String?,
+    val userSub: String
+)
+```
+
+### Example: ProjectDto
+```kotlin
+data class ProjectDto(
+    val id: Long?,
+    val navn: String,
+    val beskrivelse: String?
+)
+
+fun Project.toDto() = ProjectDto(id, navn, beskrivelse)
+```
+
+### Example: TimeEntryController (Second Feature)
+```kotlin
+@RestController
+@RequestMapping("/api/time-entries")
+class TimeEntryController(private val timeEntryFacade: TimeEntryFacade) {
+    @GetMapping
+    fun getAll(@AuthenticationPrincipal jwt: Jwt): List<TimeEntryDto> =
+        timeEntryFacade.getAll(jwt.subject)
+
+    @PostMapping
+    fun create(@RequestBody dto: TimeEntryDto, @AuthenticationPrincipal jwt: Jwt): TimeEntryDto =
+        timeEntryFacade.create(dto, jwt.subject)
+}
+```
+
+### Example: Global Error Handling
+```kotlin
+@RestControllerAdvice
+class GlobalExceptionHandler {
+    @ExceptionHandler(Exception::class)
+    fun handleException(ex: Exception): ResponseEntity<ApiError> =
+        ResponseEntity(ApiError("Uventet feil: ${ex.localizedMessage}"), HttpStatus.INTERNAL_SERVER_ERROR)
+}
+
+data class ApiError(val message: String)
+```
+
+### Example: Logging with @Slf4j
+```kotlin
+import org.slf4j.LoggerFactory
+
+class ProjectRepository {
+    private val log = LoggerFactory.getLogger(ProjectRepository::class.java)
+
+    fun save(project: Project): Project {
+        log.info("Saving project for userSub={}", project.userSub)
+        // ...
+    }
+}
+```
+
 ### Repository Example
 ```kotlin
-@Repository
 class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
-    // All queries are scoped by userSub (from JWT claims)
-    fun findById(projectId: Long, userSub: String): Project? = try {
-        jdbcTemplate.queryForObject(
-            "SELECT project_id, navn, beskrivelse FROM projects WHERE project_id = ? AND user_sub = ? AND aktiv = 1",
-            { rs, _ ->
-                Project(
-                    id = rs.getLong("project_id"),
-                    navn = rs.getString("navn"),
-                    beskrivelse = rs.getString("beskrivelse"),
-                    userSub = userSub
-                )
-            },
-            projectId, userSub
-        )
-    } catch (e: EmptyResultDataAccessException) { null }
-
     fun save(project: Project): Project {
         val id = jdbcTemplate.queryForObject(
             "INSERT INTO projects (navn, beskrivelse, user_sub) VALUES (?, ?, ?) RETURNING project_id",
@@ -105,6 +195,19 @@ class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
         )
         return project.copy(id = id ?: 0)
     }
+
+    fun findByUserSub(userSub: String): List<Project> =
+        jdbcTemplate.query(
+            "SELECT project_id, navn, beskrivelse, user_sub FROM projects WHERE user_sub = ?",
+            arrayOf(userSub)
+        ) { rs, _ ->
+            Project(
+                id = rs.getLong("project_id"),
+                navn = rs.getString("navn"),
+                beskrivelse = rs.getString("beskrivelse"),
+                userSub = rs.getString("user_sub")
+            )
+        }
 }
 ```
 

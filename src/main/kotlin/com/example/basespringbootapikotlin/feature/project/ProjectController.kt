@@ -12,10 +12,15 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.*
 
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
+
 @RestController
 @RequestMapping("/api/projects")
 @Tag(name = "Project Management")
 class ProjectController(private val projectFacade: ProjectFacade) {
+
+    private val log = LoggerFactory.getLogger(ProjectController::class.java)
 
     @PostMapping
     @PreAuthorize("hasAuthority('SCOPE_USER')")
@@ -25,7 +30,10 @@ class ProjectController(private val projectFacade: ProjectFacade) {
         @Valid @RequestBody request: CreateProjectRequest
     ): ResponseEntity<ProjectDto> {
         val userSub = principal.claims["sub"] as String
+    val correlationId = MDC.get("correlationId")
+    log.info("Creating project for userSub={} [correlationId={}]", userSub, correlationId)
         val project = projectFacade.createProject(userSub, request)
+    log.info("Project created for userSub={} [correlationId={}]", userSub, correlationId)
         return ResponseEntity.status(HttpStatus.CREATED).body(project)
     }
 
@@ -40,6 +48,8 @@ class ProjectController(private val projectFacade: ProjectFacade) {
         @RequestParam(defaultValue = "true") asc: Boolean
     ): ResponseEntity<ProjectListResponse> {
         val userSub = principal.claims["sub"] as String
+    val correlationId = MDC.get("correlationId")
+    log.info("Listing projects for userSub={} [correlationId={}]", userSub, correlationId)
         val result = projectFacade.listProjects(userSub, page, pageSize, sort, asc)
         return ResponseEntity.ok(result)
     }
@@ -52,6 +62,8 @@ class ProjectController(private val projectFacade: ProjectFacade) {
         @PathVariable id: Long
     ): ResponseEntity<ProjectDto> {
         val userSub = principal.claims["sub"] as String
+    val correlationId = MDC.get("correlationId")
+    log.info("Getting project id={} for userSub={} [correlationId={}]", id, userSub, correlationId)
         val project = projectFacade.getProject(userSub, id)
             ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(project)
@@ -66,7 +78,10 @@ class ProjectController(private val projectFacade: ProjectFacade) {
         @Valid @RequestBody request: UpdateProjectRequest
     ): ResponseEntity<ProjectDto> {
         val userSub = principal.claims["sub"] as String
+    val correlationId = MDC.get("correlationId")
+    log.info("Updating project id={} for userSub={} [correlationId={}]", id, userSub, correlationId)
         val updated = projectFacade.updateProject(userSub, id, request)
+    log.info("Project updated id={} for userSub={} [correlationId={}]", id, userSub, correlationId)
         return ResponseEntity.ok(updated)
     }
 
@@ -78,7 +93,10 @@ class ProjectController(private val projectFacade: ProjectFacade) {
         @PathVariable id: Long
     ): ResponseEntity<Void> {
         val userSub = principal.claims["sub"] as String
+    val correlationId = MDC.get("correlationId")
+    log.info("Deleting project id={} for userSub={} [correlationId={}]", id, userSub, correlationId)
         projectFacade.deleteProject(userSub, id)
+    log.info("Project deleted id={} for userSub={} [correlationId={}]", id, userSub, correlationId)
         return ResponseEntity.noContent().build()
     }
 }

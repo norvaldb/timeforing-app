@@ -7,8 +7,12 @@ import org.springframework.stereotype.Repository
 import java.sql.ResultSet
 import java.time.LocalDateTime
 
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
+
 @Repository
 class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
+    private val log = LoggerFactory.getLogger(ProjectRepository::class.java)
     private val rowMapper = RowMapper { rs: ResultSet, _: Int ->
         Project(
             projectId = rs.getLong("project_id"),
@@ -22,6 +26,9 @@ class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
     }
 
     fun save(project: Project): Project {
+    val correlationId = MDC.get("correlationId")
+    val userSub = project.userSub
+    log.info("Saving project for userSub={} [correlationId={}]", userSub, correlationId)
         val keyHolder = org.springframework.jdbc.support.GeneratedKeyHolder()
         jdbcTemplate.update({ connection ->
             val ps = connection.prepareStatement(
@@ -37,6 +44,7 @@ class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
             ps
         }, keyHolder)
         val id = keyHolder.key?.toLong() ?: 0L
+    log.info("Project saved with id={} for userSub={} [correlationId={}]", id, userSub, correlationId)
         return project.copy(projectId = id)
     }
 
@@ -65,13 +73,19 @@ class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
         jdbcTemplate.update(
             "UPDATE projects SET navn = ?, beskrivelse = ?, endret_dato = ? WHERE project_id = ? AND user_sub = ?",
             project.navn, project.beskrivelse, project.endretDato, project.projectId, project.userSub
-        ) > 0
+        ).also { updated ->
+            val correlationId = MDC.get("correlationId")
+            log.info("Updated project id={} for userSub={} [correlationId={}]. Success={}", project.projectId, project.userSub, correlationId, updated > 0)
+        } > 0
 
     fun softDelete(projectId: Long, userSub: String): Boolean =
         jdbcTemplate.update(
             "UPDATE projects SET aktiv = 0, endret_dato = ? WHERE project_id = ? AND user_sub = ?",
             LocalDateTime.now(), projectId, userSub
-        ) > 0
+        ).also { deleted ->
+            val correlationId = MDC.get("correlationId")
+            log.info("Soft deleted project id={} for userSub={} [correlationId={}]. Success={}", projectId, userSub, correlationId, deleted > 0)
+        } > 0
 
     fun existsWithTimeregistrering(projectId: Long): Boolean =
         (jdbcTemplate.queryForObject(

@@ -62,6 +62,12 @@
 
     <dependencies>
         <!-- JWT (JJWT) for mock auth -->
+        <!-- Jakarta Servlet API for CorrelationIdFilter -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>6.0.0</version>
+        </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -345,6 +351,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>3.5.3</version>
                 <configuration>
+                    <reuseForks>false</reuseForks>
                     <includes>
                         <include>**/*IT</include>
                     </includes>

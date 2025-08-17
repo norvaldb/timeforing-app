@@ -2,6 +2,10 @@
 
 > **📝 Guidelines for Updates**: Keep these instructions concise and focused on frontend development patterns. Prioritize modern web development practices and actionable guidance. Maximum target: ~150 lines total.
 
+## API contract
+- All frontend API calls must adhere to the OpenAPI contract at `/home/norvald/git/timeforing-app/target/generated-openapi/api.json`.
+- Prefer using the generated client (if available) or mirror its DTOs/paths when implementing service methods to ensure compatibility with the backend. Keep the contract in sync with backend changes and include the generated JSON in PRs when API changes are required.
+
 ## Stack & Architecture
 - **Stack**: React 18+ + TypeScript + Vite + Tailwind CSS + React Router
 - **State Management**: Zustand for global state, React Query for server state

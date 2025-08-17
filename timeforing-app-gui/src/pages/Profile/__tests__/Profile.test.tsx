@@ -26,12 +26,7 @@ vi.mock('@/components/notifications/NotificationToast', () => ({
   }),
 }));
 
-// Mock window.confirm for delete tests
-const mockConfirm = vi.fn();
-Object.defineProperty(window, 'confirm', {
-  value: mockConfirm,
-  writable: true,
-});
+// We'll interact with the ConfirmDialog component instead of mocking window.confirm
 
 const MockedUserService = userService as any;
 
@@ -202,36 +197,38 @@ describe('Profile', () => {
   });
 
   it('should show confirmation dialog when deleting account', async () => {
-    mockConfirm.mockReturnValue(false);
     const user = userEvent.setup();
-    
     render(<Profile />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
-    
+
     const deleteButton = screen.getByRole('button', { name: 'Slett' });
     await user.click(deleteButton);
-    
-    expect(mockConfirm).toHaveBeenCalledWith(
-      'Er du sikker på at du vil slette kontoen din? Denne handlingen kan ikke angres.'
-    );
+
+    // Dialog should appear
+    await waitFor(() => {
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+    });
   });
 
   it('should delete account when confirmed', async () => {
-    mockConfirm.mockReturnValue(true);
     const user = userEvent.setup();
-    
+
     render(<Profile />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
-    
+
     const deleteButton = screen.getByRole('button', { name: 'Slett' });
     await user.click(deleteButton);
-    
+
+    // confirm using dialog
+    await waitFor(() => expect(screen.getByTestId('confirm-ok')).toBeInTheDocument());
+    await user.click(screen.getByTestId('confirm-ok'));
+
     await waitFor(() => {
       expect(MockedUserService.deleteAccount).toHaveBeenCalled();
       expect(mockSuccess).toHaveBeenCalledWith('slettet');
@@ -239,19 +236,22 @@ describe('Profile', () => {
   });
 
   it('should handle account deletion error', async () => {
-    mockConfirm.mockReturnValue(true);
     MockedUserService.deleteAccount.mockRejectedValueOnce(new Error('Server error'));
-    
+
     const user = userEvent.setup();
     render(<Profile />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Test Bruker')).toBeInTheDocument();
     });
-    
+
     const deleteButton = screen.getByRole('button', { name: 'Slett' });
     await user.click(deleteButton);
-    
+
+    // confirm using dialog
+    await waitFor(() => expect(screen.getByTestId('confirm-ok')).toBeInTheDocument());
+    await user.click(screen.getByTestId('confirm-ok'));
+
     await waitFor(() => {
       expect(mockError).toHaveBeenCalledWith('noeGikkGalt');
     });

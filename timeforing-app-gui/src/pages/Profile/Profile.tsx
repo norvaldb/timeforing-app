@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Settings, Edit3 } from 'lucide-react';
 import { UserForm } from '@/components/forms/UserForm';
 import { Button } from '@/components/ui/Button';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useConfirm } from '@/components/confirm/ConfirmProvider';
 import { useNotification } from '@/components/notifications/NotificationToast';
 import { userService } from '@/services/userService';
 import { UserFormData } from '@/utils/validation';
@@ -82,15 +82,18 @@ export const Profile: React.FC = () => {
     setIsEditing(true);
   };
 
+  const confirm = useConfirm();
+
   const handleDeleteAccount = async () => {
-    // open confirmation dialog instead (handled in component state)
-    setConfirmOpen(true);
-  };
+    const ok = await confirm({
+      title: 'Slett konto',
+      description: 'Er du sikker på at du vil slette kontoen din? Denne handlingen kan ikke angres.',
+      confirmLabel: 'Slett',
+      cancelLabel: 'Avbryt',
+    });
 
-  const [confirmOpen, setConfirmOpen] = useState(false);
+    if (!ok) return;
 
-  const confirmDelete = async () => {
-    setConfirmOpen(false);
     try {
       await userService.deleteAccount();
       notification.success('slettet');
@@ -98,10 +101,6 @@ export const Profile: React.FC = () => {
     } catch (error: unknown) {
       notification.error('noeGikkGalt');
     }
-  };
-
-  const cancelDelete = () => {
-    setConfirmOpen(false);
   };
 
   if (isLoading) {
@@ -302,15 +301,7 @@ export const Profile: React.FC = () => {
         </div>
       )}
 
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Slett konto"
-        description="Er du sikker på at du vil slette kontoen din? Denne handlingen kan ikke angres."
-        confirmLabel="Slett"
-        cancelLabel="Avbryt"
-        onConfirm={confirmDelete}
-        onCancel={cancelDelete}
-      />
+  {/* ConfirmDialog is provided globally by ConfirmProvider */}
     </div>
   );
 };

@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom';
-import { vi, afterEach, beforeAll, afterAll } from 'vitest';
+import { vi, afterEach, beforeAll, afterAll, beforeEach } from 'vitest';
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import ConfirmProvider from '@/components/confirm/ConfirmProvider';
 
 // Mock APIs that may not be available in test environment
 Object.defineProperty(window, 'matchMedia', {
@@ -101,4 +104,41 @@ beforeAll(() => {
 
 afterAll(() => {
   console.error = originalError;
+});
+
+// Mount a global ConfirmProvider so components using useConfirm() in tests
+// have a provider available without wrapping every single render. The
+// provider renders a ConfirmDialog into the DOM which tests can interact
+// with via Testing Library.
+// Mount/unmount a ConfirmProvider for each test so dialog state is isolated
+// between tests. We try to use React 18's createRoot when available.
+let __test_root_container: HTMLDivElement | null = null;
+let __test_root: any = null;
+
+beforeEach(() => {
+  __test_root_container = document.createElement('div');
+  __test_root_container.id = 'test-root';
+  document.body.appendChild(__test_root_container);
+  try {
+    __test_root = createRoot(__test_root_container);
+    __test_root.render(React.createElement(ConfirmProvider, null, React.createElement('div')));
+  } catch (e) {
+    __test_root = null;
+  }
+});
+
+afterEach(() => {
+  // Unmount the provider and remove container to clean up any open dialogs
+  try {
+    if (__test_root && typeof __test_root.unmount === 'function') {
+      __test_root.unmount();
+    }
+  } catch (e) {
+    // ignore
+  }
+  if (__test_root_container && __test_root_container.parentNode) {
+    __test_root_container.parentNode.removeChild(__test_root_container);
+  }
+  __test_root = null;
+  __test_root_container = null;
 });

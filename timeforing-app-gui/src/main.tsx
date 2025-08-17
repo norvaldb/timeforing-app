@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import App from './App.tsx';
+import { ConfirmProvider } from '@/components/confirm/ConfirmProvider';
 import './styles/globals.css';
 
 // Create a client
@@ -21,7 +22,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <ConfirmProvider>
+          <App />
+        </ConfirmProvider>
         <Toaster
           position="top-right"
           toastOptions={{

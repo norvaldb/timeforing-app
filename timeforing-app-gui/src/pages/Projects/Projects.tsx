@@ -4,7 +4,7 @@ import { useNotification } from '@/components/notifications/NotificationToast';
 import type { ProjectDto } from '../../types/project';
 import ProjectForm, { ProjectFormData } from '../../components/forms/ProjectForm';
 import { Button } from '../../components/ui/Button';
-import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import { useConfirm } from '@/components/confirm/ConfirmProvider';
 
 export const Projects = () => {
   const [projects, setProjects] = useState<ProjectDto[]>([]);
@@ -12,8 +12,7 @@ export const Projects = () => {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<ProjectDto | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [toDelete, setToDelete] = useState<ProjectDto | null>(null);
+  const confirm = useConfirm();
 
   const fetch = async () => {
     setLoading(true);
@@ -74,28 +73,23 @@ export const Projects = () => {
   };
 
   const handleDelete = async (p: ProjectDto) => {
-    setToDelete(p);
-    setConfirmOpen(true);
-  };
+    const ok = await confirm({
+      title: 'Slett prosjekt',
+      description: `Er du sikker på at du vil slette ${p.navn}?`,
+      confirmLabel: 'Slett',
+      cancelLabel: 'Avbryt',
+    });
 
-  const confirmDelete = async () => {
-    if (!toDelete) return;
-    setConfirmOpen(false);
+    if (!ok) return;
+
     try {
-      await projectService.remove(toDelete.id);
-      setProjects((prev) => prev.filter((x) => x.id !== toDelete.id));
+      await projectService.remove(p.id);
+      setProjects((prev) => prev.filter((x) => x.id !== p.id));
       notify.success('slettet');
     } catch (err) {
       console.error('Delete failed', err);
       notify.customError('Noe gikk galt, prøv igjen');
-    } finally {
-      setToDelete(null);
     }
-  };
-
-  const cancelDelete = () => {
-    setConfirmOpen(false);
-    setToDelete(null);
   };
 
   const notify = useNotification();
@@ -110,15 +104,7 @@ export const Projects = () => {
         <Button onClick={openCreate}>Legg til prosjekt</Button>
       </div>
 
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Slett prosjekt"
-        description={toDelete ? `Er du sikker på at du vil slette ${toDelete.navn}?` : ''}
-        confirmLabel="Slett"
-        cancelLabel="Avbryt"
-        onConfirm={confirmDelete}
-        onCancel={cancelDelete}
-      />
+  {/* ConfirmDialog provided globally via ConfirmProvider */}
 
       <div className="bg-card rounded-lg border p-6">
         {showForm && (

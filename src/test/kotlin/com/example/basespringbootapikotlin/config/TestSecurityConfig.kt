@@ -14,9 +14,13 @@ class TestSecurityConfig {
     fun jwtDecoder(): JwtDecoder = Mockito.mock(JwtDecoder::class.java).apply {
         Mockito.`when`(decode(Mockito.anyString())).thenAnswer { invocation ->
             val token = invocation.arguments[0] as String
+            val userSub = when {
+                token.contains("different-sub") -> "different-user-sub"
+                else -> "test-user-sub"
+            }
             Jwt.withTokenValue(token)
                 .header("alg", "none")
-                .claim("sub", "test-user-sub")
+                .claim("sub", userSub)
                 .claim("scope", "USER") // Add scope claim for authorities
                 .build()
         }

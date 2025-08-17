@@ -30,7 +30,8 @@ class SecurityConfig {
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/api/users/register",
-                        "/api/users/check-email"
+                        "/api/users/check-email",
+                        "/api/mock-auth/token"
                     ).permitAll()
                     .anyRequest().authenticated()
             }

@@ -20,19 +20,19 @@ import com.example.basespringbootapikotlin.config.OracleTestContainerConfig
 
 @SpringBootTest(classes = [TestSecurityConfig::class])
 @AutoConfigureMockMvc
-
 class ProjectControllerIT @Autowired constructor(
 	mockMvc: MockMvc,
 	objectMapper: ObjectMapper,
 	@Autowired private val jdbcTemplate: JdbcTemplate
-) : OracleTestContainerConfig() {
+) : com.example.basespringbootapikotlin.config.BaseTransactionalIT() {
 	val mockMvc: MockMvc = mockMvc
 	val objectMapper: ObjectMapper = objectMapper
 	private val baseUrl = "/api/projects"
 
 	@BeforeEach
 	fun setup() {
-		jdbcTemplate.execute("TRUNCATE TABLE projects")
+	jdbcTemplate.execute("DELETE FROM time_entries")
+	jdbcTemplate.execute("DELETE FROM projects")
 	}
 
 	@Test

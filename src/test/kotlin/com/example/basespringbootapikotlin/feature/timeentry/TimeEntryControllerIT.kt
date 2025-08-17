@@ -13,7 +13,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.time.LocalDate
 import com.example.basespringbootapikotlin.config.OracleTestContainerConfig
+
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.test.annotation.Rollback
+import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest(classes = [com.example.basespringbootapikotlin.config.TestSecurityConfig::class])
 @AutoConfigureMockMvc
@@ -21,16 +24,17 @@ class TimeEntryControllerIT @Autowired constructor(
     val mockMvc: MockMvc,
     val objectMapper: ObjectMapper,
     @Autowired private val jdbcTemplate: JdbcTemplate
-) : OracleTestContainerConfig() {
+) : com.example.basespringbootapikotlin.config.BaseTransactionalIT() {
     private val baseUrl = "/api/time-entries"
         private val userSub = "test-user-sub"
     private val projectId = 1L
     private val today = LocalDate.now()
 
     @BeforeEach
+    
     fun setup() {
-        jdbcTemplate.execute("TRUNCATE TABLE time_entries")
-        jdbcTemplate.execute("TRUNCATE TABLE projects")
+        jdbcTemplate.execute("DELETE FROM time_entries")
+        jdbcTemplate.execute("DELETE FROM projects")
         jdbcTemplate.update("INSERT INTO projects (project_id, user_sub, navn, aktiv, opprettet_dato, endret_dato) VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
             projectId, userSub, "Testprosjekt")
     }

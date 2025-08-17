@@ -7,21 +7,14 @@ import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.test.context.ContextConfiguration
 import org.testcontainers.containers.OracleContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
-@Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ContextConfiguration(initializers = [OracleTestContainerConfig.Companion.Initializer::class])
 @org.springframework.test.context.ActiveProfiles("test")
 abstract class OracleTestContainerConfig {
     companion object {
-        @Container
         @JvmStatic
-        val oracle: OracleContainer = OracleContainer("gvenzl/oracle-xe:21-slim")
-            .withUsername("timeforing_user")
-            .withPassword("TimeTrack123")
-            // No .withExposedPorts needed; Testcontainers will randomize
+        val oracle: OracleContainer = SharedOracleContainer.oracle
 
         class Initializer : ApplicationContextInitializer<ConfigurableApplicationContext> {
             override fun initialize(context: ConfigurableApplicationContext) {
@@ -37,4 +30,11 @@ abstract class OracleTestContainerConfig {
             }
         }
     }
+}
+
+/**
+ * Convenience base class that combines the shared Oracle container
+ * with transactional rollback behavior for tests.
+ */
+abstract class BaseTransactionalIT : OracleTestContainerConfig() {
 }

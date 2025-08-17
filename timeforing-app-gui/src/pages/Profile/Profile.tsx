@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Settings, Edit3 } from 'lucide-react';
 import { UserForm } from '@/components/forms/UserForm';
 import { Button } from '@/components/ui/Button';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useNotification } from '@/components/notifications/NotificationToast';
 import { userService } from '@/services/userService';
 import { UserFormData } from '@/utils/validation';
@@ -82,12 +83,14 @@ export const Profile: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      'Er du sikker på at du vil slette kontoen din? Denne handlingen kan ikke angres.'
-    );
-    
-    if (!confirmed) return;
-    
+    // open confirmation dialog instead (handled in component state)
+    setConfirmOpen(true);
+  };
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const confirmDelete = async () => {
+    setConfirmOpen(false);
     try {
       await userService.deleteAccount();
       notification.success('slettet');
@@ -95,6 +98,10 @@ export const Profile: React.FC = () => {
     } catch (error: unknown) {
       notification.error('noeGikkGalt');
     }
+  };
+
+  const cancelDelete = () => {
+    setConfirmOpen(false);
   };
 
   if (isLoading) {
@@ -252,7 +259,7 @@ export const Profile: React.FC = () => {
             <Settings className="h-5 w-5" />
             Innstillinger
           </h3>
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2">
               <div>
@@ -265,7 +272,7 @@ export const Profile: React.FC = () => {
                 Konfigurer
               </Button>
             </div>
-            
+
             <div className="flex items-center justify-between py-2">
               <div>
                 <p className="font-medium">Eksporter data</p>
@@ -277,7 +284,7 @@ export const Profile: React.FC = () => {
                 Eksporter
               </Button>
             </div>
-            
+
             <div className="border-t pt-4">
               <div className="flex items-center justify-between py-2">
                 <div>
@@ -294,6 +301,16 @@ export const Profile: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Slett konto"
+        description="Er du sikker på at du vil slette kontoen din? Denne handlingen kan ikke angres."
+        confirmLabel="Slett"
+        cancelLabel="Avbryt"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 };

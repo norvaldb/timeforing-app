@@ -90,10 +90,17 @@ if [ "$SHOULD_CREATE_USER" = true ]; then
 fi
 
 # Start services
+
+# Enhanced logic: If --rebuild is used, only rebuild/restart API if DB is running
 if [ "$START_API" = true ]; then
     if [ "$FORCE_REBUILD" = true ]; then
-        log_info "Starting Oracle database and API with forced rebuild..."
-        podman-compose up -d --build --force-recreate
+        if podman ps --format '{{.Names}}' | grep -q "timeforing-oracle"; then
+            log_info "Database container is already running. Rebuilding/restarting API only..."
+            podman-compose up -d --build --force-recreate api
+        else
+            log_info "Database container is not running. Rebuilding/restarting both database and API..."
+            podman-compose up -d --build --force-recreate
+        fi
     else
         log_info "Starting Oracle database and API..."
         podman-compose up -d --build

@@ -100,4 +100,133 @@ class TimeEntryControllerIT @Autowired constructor(
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.code").value("PROJECT_NOT_FOUND_OR_INACTIVE"))
     }
+
+    @Test
+    fun should_update_time_entry() {
+        // Create time entry first
+        val createDto = mapOf(
+            "prosjektId" to projectId,
+            "dato" to today.toString(),
+            "timer" to 2.0,
+            "kommentar" to "Original comment"
+        )
+        val mvcResult = mockMvc.perform(post(baseUrl)
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim")
+            .content(objectMapper.writeValueAsString(createDto)))
+            .andExpect(status().isCreated)
+            .andReturn()
+        
+        val timeEntryId = objectMapper.readTree(mvcResult.response.contentAsString).get("timeEntryId").asLong()
+        
+        // Update the time entry
+        val updateDto = mapOf(
+            "prosjektId" to projectId,
+            "dato" to today.toString(),
+            "timer" to 3.5,
+            "kommentar" to "Updated comment"
+        )
+        mockMvc.perform(put("$baseUrl/$timeEntryId")
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim")
+            .content(objectMapper.writeValueAsString(updateDto)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.timer").value(3.5))
+            .andExpect(jsonPath("$.kommentar").value("Updated comment"))
+    }
+
+    @Test
+    fun should_delete_time_entry() {
+        // Create time entry first
+        val createDto = mapOf(
+            "prosjektId" to projectId,
+            "dato" to today.toString(),
+            "timer" to 2.0,
+            "kommentar" to "To be deleted"
+        )
+        val mvcResult = mockMvc.perform(post(baseUrl)
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim")
+            .content(objectMapper.writeValueAsString(createDto)))
+            .andExpect(status().isCreated)
+            .andReturn()
+        
+        val timeEntryId = objectMapper.readTree(mvcResult.response.contentAsString).get("timeEntryId").asLong()
+        
+        // Delete the time entry
+        mockMvc.perform(delete("$baseUrl/$timeEntryId")
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
+            .andExpect(status().isNoContent)
+        
+        // Verify it's deleted by trying to fetch it
+        mockMvc.perform(get("$baseUrl/$timeEntryId")
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun should_list_time_entries_with_date_filtering() {
+        val yesterday = today.minusDays(1)
+        val tomorrow = today.plusDays(1)
+        
+        // Create time entries on different dates
+        val dto1 = mapOf("prosjektId" to projectId, "dato" to yesterday.toString(), "timer" to 2.0, "kommentar" to "Yesterday")
+        val dto2 = mapOf("prosjektId" to projectId, "dato" to today.toString(), "timer" to 3.0, "kommentar" to "Today")
+        val dto3 = mapOf("prosjektId" to projectId, "dato" to tomorrow.toString(), "timer" to 1.5, "kommentar" to "Tomorrow")
+        
+        mockMvc.perform(post(baseUrl)
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim")
+            .content(objectMapper.writeValueAsString(dto1)))
+            .andExpect(status().isCreated)
+        
+        mockMvc.perform(post(baseUrl)
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim")
+            .content(objectMapper.writeValueAsString(dto2)))
+            .andExpect(status().isCreated)
+        
+        mockMvc.perform(post(baseUrl)
+            .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim")
+            .content(objectMapper.writeValueAsString(dto3)))
+            .andExpect(status().isCreated)
+        
+        // Test: Get all entries (no filter)
+        mockMvc.perform(get(baseUrl)
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(3))
+        
+        // Test: Filter by date range (only today)
+        mockMvc.perform(get(baseUrl)
+            .param("from", today.toString())
+            .param("to", today.toString())
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].kommentar").value("Today"))
+        
+        // Test: Filter from yesterday to today
+        mockMvc.perform(get(baseUrl)
+            .param("from", yesterday.toString())
+            .param("to", today.toString())
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(2))
+        
+        // Test: Only "from" parameter
+        mockMvc.perform(get(baseUrl)
+            .param("from", today.toString())
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(2)) // today and tomorrow
+        
+        // Test: Only "to" parameter
+        mockMvc.perform(get(baseUrl)
+            .param("to", today.toString())
+            .header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(2)) // yesterday and today
+    }
 }

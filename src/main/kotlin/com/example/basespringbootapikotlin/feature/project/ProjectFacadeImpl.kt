@@ -12,9 +12,9 @@ import java.time.LocalDateTime
 class ProjectFacadeImpl(
     private val projectRepository: ProjectRepository
 ) : ProjectFacade {
-    override fun createProject(userId: Long, request: CreateProjectRequest): ProjectDto {
+    override fun createProject(userSub: String, request: CreateProjectRequest): ProjectDto {
         val project = Project(
-            userId = userId,
+            userSub = userSub,
             navn = request.navn.trim(),
             beskrivelse = request.beskrivelse?.trim(),
             aktiv = true,
@@ -25,13 +25,13 @@ class ProjectFacadeImpl(
         return saved.toDto()
     }
 
-    override fun getProject(userId: Long, projectId: Long): ProjectDto? {
-        return projectRepository.findByIdAndUser(projectId, userId)?.toDto()
+    override fun getProject(userSub: String, projectId: Long): ProjectDto? {
+        return projectRepository.findByIdAndUserSub(projectId, userSub)?.toDto()
     }
 
-    override fun listProjects(userId: Long, page: Int, pageSize: Int, sort: String, asc: Boolean): ProjectListResponse {
-        val projects = projectRepository.findAllByUser(userId, page, pageSize, sort, asc)
-        val total = projectRepository.countByUser(userId)
+    override fun listProjects(userSub: String, page: Int, pageSize: Int, sort: String, asc: Boolean): ProjectListResponse {
+        val projects = projectRepository.findAllByUserSub(userSub, page, pageSize, sort, asc)
+        val total = projectRepository.countByUserSub(userSub)
         return ProjectListResponse(
             projects = projects.map { it.toDto() },
             page = page,
@@ -40,8 +40,8 @@ class ProjectFacadeImpl(
         )
     }
 
-    override fun updateProject(userId: Long, projectId: Long, request: UpdateProjectRequest): ProjectDto {
-        val existing = projectRepository.findByIdAndUser(projectId, userId)
+    override fun updateProject(userSub: String, projectId: Long, request: UpdateProjectRequest): ProjectDto {
+        val existing = projectRepository.findByIdAndUserSub(projectId, userSub)
             ?: throw IllegalArgumentException("Prosjekt ikke funnet")
         val updated = existing.copy(
             navn = request.navn.trim(),
@@ -54,13 +54,13 @@ class ProjectFacadeImpl(
         return updated.toDto()
     }
 
-    override fun deleteProject(userId: Long, projectId: Long): Boolean {
-        val existing = projectRepository.findByIdAndUser(projectId, userId)
+    override fun deleteProject(userSub: String, projectId: Long): Boolean {
+        val existing = projectRepository.findByIdAndUserSub(projectId, userSub)
             ?: throw IllegalArgumentException("Prosjekt ikke funnet")
         if (projectRepository.existsWithTimeregistrering(projectId)) {
             throw IllegalStateException("Kan ikke slette prosjekt med registrerte timer")
         }
-        return projectRepository.softDelete(projectId, userId)
+        return projectRepository.softDelete(projectId, userSub)
     }
 }
 

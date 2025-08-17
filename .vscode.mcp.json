@@ -1,0 +1,8 @@
+{
+  "backend": "filesystem",
+  "filesystem": {
+    "root": "."
+  },
+  "port": 8080,
+  "description": "MCP server config for local filesystem workspace."
+}

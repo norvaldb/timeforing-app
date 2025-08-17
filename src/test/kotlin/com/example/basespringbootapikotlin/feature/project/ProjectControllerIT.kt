@@ -10,43 +10,37 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
-import org.springframework.security.test.context.support.WithMockUser
+import com.example.basespringbootapikotlin.config.TestSecurityConfig
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import org.springframework.jdbc.core.JdbcTemplate
 
-@SpringBootTest
+@SpringBootTest(classes = [TestSecurityConfig::class])
 @AutoConfigureMockMvc
+
 class ProjectControllerIT @Autowired constructor(
 	mockMvc: MockMvc,
-	objectMapper: ObjectMapper
+	objectMapper: ObjectMapper,
+	@Autowired private val jdbcTemplate: JdbcTemplate
 ) : OracleTestContainerConfig() {
 	val mockMvc: MockMvc = mockMvc
 	val objectMapper: ObjectMapper = objectMapper
 	private val baseUrl = "/api/projects"
 
-	@Autowired
-	lateinit var jdbcTemplate: org.springframework.jdbc.core.JdbcTemplate
-
 	@BeforeEach
 	fun setup() {
-		// Clean up tables for test isolation
 		jdbcTemplate.execute("TRUNCATE TABLE projects")
-		jdbcTemplate.execute("TRUNCATE TABLE users")
-		// Re-insert test user with user_id = 1
-		jdbcTemplate.execute("""
-			INSERT INTO users (user_id, navn, mobil, epost, status, opprettet_dato, sist_endret, version)
-			VALUES (1, 'Test User', '+4712345678', 'testuser@example.com', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
-		""")
 	}
 
 	@Test
-	@WithMockUser(username = "1", roles = ["USER"])
 	fun `create and fetch project`() {
 		val request = CreateProjectRequest(navn = "Testprosjekt", beskrivelse = "Test")
 		val json = objectMapper.writeValueAsString(request)
+		// Simulate JWT with sub claim (stateless)
 		val mvcResult = mockMvc.perform(post(baseUrl)
 			.contentType(MediaType.APPLICATION_JSON)
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim")
 			.content(json))
 			.andExpect(status().isCreated)
 			.andExpect(jsonPath("$.navn").value("Testprosjekt"))
@@ -54,19 +48,20 @@ class ProjectControllerIT @Autowired constructor(
 		val response = mvcResult.response.contentAsString
 		val createdId = objectMapper.readTree(response).get("projectId").asLong()
 		// Fetch
-		mockMvc.perform(get("$baseUrl/$createdId"))
+		mockMvc.perform(get("$baseUrl/$createdId")
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.navn").value("Testprosjekt"))
 	}
 
 	@Test
-	@WithMockUser(username = "1", roles = ["USER"])
 	fun `update project`() {
 		// Create
 		val create = CreateProjectRequest(navn = "P1", beskrivelse = "B1")
 		val createJson = objectMapper.writeValueAsString(create)
 		val mvcResult = mockMvc.perform(post(baseUrl)
 			.contentType(MediaType.APPLICATION_JSON)
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim")
 			.content(createJson))
 			.andExpect(status().isCreated)
 			.andReturn()
@@ -76,47 +71,53 @@ class ProjectControllerIT @Autowired constructor(
 		val updateJson = objectMapper.writeValueAsString(update)
 		mockMvc.perform(put("$baseUrl/$id")
 			.contentType(MediaType.APPLICATION_JSON)
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim")
 			.content(updateJson))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.navn").value("P2"))
 	}
 
 	@Test
-	@WithMockUser(username = "1", roles = ["USER"])
 	fun `delete project`() {
 		// Create
 		val create = CreateProjectRequest(navn = "P1", beskrivelse = "B1")
 		val createJson = objectMapper.writeValueAsString(create)
 		val mvcResult = mockMvc.perform(post(baseUrl)
 			.contentType(MediaType.APPLICATION_JSON)
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim")
 			.content(createJson))
 			.andExpect(status().isCreated)
 			.andReturn()
 		val id = objectMapper.readTree(mvcResult.response.contentAsString).get("projectId").asLong()
 		// Delete
-		mockMvc.perform(delete("$baseUrl/$id"))
+		mockMvc.perform(delete("$baseUrl/$id")
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
 			.andExpect(status().isNoContent)
 		// Should not be found
-		mockMvc.perform(get("$baseUrl/$id"))
+		mockMvc.perform(get("$baseUrl/$id")
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
 			.andExpect(status().isNotFound)
 	}
 
 	@Test
-	@WithMockUser(username = "1", roles = ["USER"])
 	fun `list projects paginated`() {
 		// Create two projects
 		val req1 = CreateProjectRequest(navn = "P1", beskrivelse = "B1")
 		val req2 = CreateProjectRequest(navn = "P2", beskrivelse = "B2")
 		mockMvc.perform(post(baseUrl)
 			.contentType(MediaType.APPLICATION_JSON)
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim")
 			.content(objectMapper.writeValueAsString(req1)))
 			.andExpect(status().isCreated)
 		mockMvc.perform(post(baseUrl)
 			.contentType(MediaType.APPLICATION_JSON)
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim")
 			.content(objectMapper.writeValueAsString(req2)))
 			.andExpect(status().isCreated)
 		// List
-		mockMvc.perform(get(baseUrl).param("page", "1").param("pageSize", "10"))
+		mockMvc.perform(get(baseUrl)
+			.param("page", "1").param("pageSize", "10")
+			.header("Authorization", "Bearer dummy-jwt-with-sub-claim"))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.projects").isArray)
 			.andExpect(jsonPath("$.projects.length()").value(2))

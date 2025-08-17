@@ -12,15 +12,26 @@ class MockJwtService {
     private val secretKey: Key = SIG.HS256.key().build()
     private val issuer = "mock-issuer"
 
-    fun generateToken(username: String, roles: List<String>, validHours: Long = 12): String {
+    fun generateToken(
+        sub: String,
+        name: String,
+        email: String,
+        phone: String? = null,
+        roles: List<String>,
+        validHours: Long = 12
+    ): String {
         val now = Instant.now()
         val expiry = now.plusSeconds(validHours * 60 * 60)
-        return Jwts.builder()
-            .subject(username)
+        val builder = Jwts.builder()
+            .subject(sub)
             .issuer(issuer)
             .issuedAt(Date.from(now))
             .expiration(Date.from(expiry))
+            .claim("name", name)
+            .claim("email", email)
             .claim("roles", roles)
+        if (phone != null) builder.claim("phone", phone)
+        return builder
             .signWith(secretKey, io.jsonwebtoken.SignatureAlgorithm.HS256)
             .compact()
     }

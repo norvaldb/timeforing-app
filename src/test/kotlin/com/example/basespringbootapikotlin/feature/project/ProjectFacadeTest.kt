@@ -15,7 +15,7 @@ import java.time.LocalDateTime
 class ProjectFacadeTest {
     private lateinit var projectRepository: ProjectRepository
     private lateinit var projectFacade: ProjectFacadeImpl
-    private val userId = 1L
+    private val userSub = "test-user-sub"
     private val now = LocalDateTime.now()
 
     @BeforeEach
@@ -27,9 +27,9 @@ class ProjectFacadeTest {
     @Test
     fun `createProject should save and return project`() {
         val request = CreateProjectRequest("Prosjekt X", "Beskrivelse")
-        val project = Project(10L, userId, request.navn, request.beskrivelse, true, now, now)
+        val project = Project(10L, userSub, request.navn, request.beskrivelse, true, now, now)
         every { projectRepository.save(any()) } returns project
-        val result = projectFacade.createProject(userId, request)
+        val result = projectFacade.createProject(userSub, request)
         assertEquals("Prosjekt X", result.navn)
         assertEquals("Beskrivelse", result.beskrivelse)
         verify { projectRepository.save(any()) }
@@ -37,65 +37,65 @@ class ProjectFacadeTest {
 
     @Test
     fun `getProject should return project if found`() {
-        val project = Project(10L, userId, "P1", "B", true, now, now)
-        every { projectRepository.findByIdAndUser(10L, userId) } returns project
-        val result = projectFacade.getProject(userId, 10L)
+        val project = Project(10L, userSub, "P1", "B", true, now, now)
+    every { projectRepository.findByIdAndUserSub(10L, userSub) } returns project
+        val result = projectFacade.getProject(userSub, 10L)
         assertNotNull(result)
         assertEquals("P1", result!!.navn)
     }
 
     @Test
     fun `getProject should return null if not found`() {
-        every { projectRepository.findByIdAndUser(99L, userId) } returns null
-        val result = projectFacade.getProject(userId, 99L)
+    every { projectRepository.findByIdAndUserSub(99L, userSub) } returns null
+        val result = projectFacade.getProject(userSub, 99L)
         assertNull(result)
     }
 
     @Test
     fun `updateProject should update and return project`() {
-        val project = Project(10L, userId, "Old", "Old desc", true, now, now)
+        val project = Project(10L, userSub, "Old", "Old desc", true, now, now)
         val update = UpdateProjectRequest("New", "New desc")
-        every { projectRepository.findByIdAndUser(10L, userId) } returns project
+    every { projectRepository.findByIdAndUserSub(10L, userSub) } returns project
         every { projectRepository.update(any()) } returns true
-        val result = projectFacade.updateProject(userId, 10L, update)
+        val result = projectFacade.updateProject(userSub, 10L, update)
         assertEquals("New", result.navn)
         assertEquals("New desc", result.beskrivelse)
     }
 
     @Test
     fun `updateProject should throw if not found`() {
-        every { projectRepository.findByIdAndUser(10L, userId) } returns null
+    every { projectRepository.findByIdAndUserSub(10L, userSub) } returns null
         val update = UpdateProjectRequest("New", "New desc")
         assertThrows(IllegalArgumentException::class.java) {
-            projectFacade.updateProject(userId, 10L, update)
+            projectFacade.updateProject(userSub, 10L, update)
         }
     }
 
     @Test
     fun `deleteProject should soft delete if no time entries`() {
-        val project = Project(10L, userId, "P", "B", true, now, now)
-        every { projectRepository.findByIdAndUser(10L, userId) } returns project
+        val project = Project(10L, userSub, "P", "B", true, now, now)
+    every { projectRepository.findByIdAndUserSub(10L, userSub) } returns project
         every { projectRepository.existsWithTimeregistrering(10L) } returns false
-        every { projectRepository.softDelete(10L, userId) } returns true
-        val result = projectFacade.deleteProject(userId, 10L)
+        every { projectRepository.softDelete(10L, userSub) } returns true
+        val result = projectFacade.deleteProject(userSub, 10L)
         assertTrue(result)
     }
 
     @Test
     fun `deleteProject should throw if project has time entries`() {
-        val project = Project(10L, userId, "P", "B", true, now, now)
-        every { projectRepository.findByIdAndUser(10L, userId) } returns project
+        val project = Project(10L, userSub, "P", "B", true, now, now)
+    every { projectRepository.findByIdAndUserSub(10L, userSub) } returns project
         every { projectRepository.existsWithTimeregistrering(10L) } returns true
         assertThrows(IllegalStateException::class.java) {
-            projectFacade.deleteProject(userId, 10L)
+            projectFacade.deleteProject(userSub, 10L)
         }
     }
 
     @Test
     fun `deleteProject should throw if not found`() {
-        every { projectRepository.findByIdAndUser(10L, userId) } returns null
+    every { projectRepository.findByIdAndUserSub(10L, userSub) } returns null
         assertThrows(IllegalArgumentException::class.java) {
-            projectFacade.deleteProject(userId, 10L)
+            projectFacade.deleteProject(userSub, 10L)
         }
     }
 }

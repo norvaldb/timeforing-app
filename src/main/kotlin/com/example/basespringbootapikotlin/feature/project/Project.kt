@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 
 data class Project(
     val projectId: Long = 0,
-    val userId: Long,
+    val userSub: String,
     val navn: String,
     val beskrivelse: String? = null,
     val aktiv: Boolean = true,

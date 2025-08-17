@@ -12,7 +12,7 @@ class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
     private val rowMapper = RowMapper { rs: ResultSet, _: Int ->
         Project(
             projectId = rs.getLong("project_id"),
-            userId = rs.getLong("user_id"),
+            userSub = rs.getString("user_sub"),
             navn = rs.getString("navn"),
             beskrivelse = rs.getString("beskrivelse"),
             aktiv = rs.getInt("aktiv") == 1,
@@ -25,10 +25,10 @@ class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
         val keyHolder = org.springframework.jdbc.support.GeneratedKeyHolder()
         jdbcTemplate.update({ connection ->
             val ps = connection.prepareStatement(
-                "INSERT INTO projects (user_id, navn, beskrivelse, aktiv, opprettet_dato, endret_dato) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO projects (user_sub, navn, beskrivelse, aktiv, opprettet_dato, endret_dato) VALUES (?, ?, ?, ?, ?, ?)",
                 arrayOf("project_id")
             )
-            ps.setLong(1, project.userId)
+            ps.setString(1, project.userSub)
             ps.setString(2, project.navn)
             ps.setString(3, project.beskrivelse)
             ps.setInt(4, if (project.aktiv) 1 else 0)
@@ -40,37 +40,37 @@ class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
         return project.copy(projectId = id)
     }
 
-    fun findByIdAndUser(projectId: Long, userId: Long): Project? =
+    fun findByIdAndUserSub(projectId: Long, userSub: String): Project? =
         jdbcTemplate.query(
-            "SELECT * FROM projects WHERE project_id = ? AND user_id = ? AND aktiv = 1",
+            "SELECT * FROM projects WHERE project_id = ? AND user_sub = ? AND aktiv = 1",
             rowMapper,
-            projectId, userId
+            projectId, userSub
         ).firstOrNull()
 
-    fun findAllByUser(userId: Long, page: Int, pageSize: Int, sort: String = "navn", asc: Boolean = true): List<Project> =
+    fun findAllByUserSub(userSub: String, page: Int, pageSize: Int, sort: String = "navn", asc: Boolean = true): List<Project> =
         jdbcTemplate.query(
-            "SELECT * FROM projects WHERE user_id = ? AND aktiv = 1 ORDER BY $sort ${if (asc) "ASC" else "DESC"} OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
+            "SELECT * FROM projects WHERE user_sub = ? AND aktiv = 1 ORDER BY $sort ${if (asc) "ASC" else "DESC"} OFFSET ? ROWS FETCH NEXT ? ROWS ONLY",
             rowMapper,
-            userId, (page - 1) * pageSize, pageSize
+            userSub, (page - 1) * pageSize, pageSize
         )
 
-    fun countByUser(userId: Long): Long =
+    fun countByUserSub(userSub: String): Long =
         jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM projects WHERE user_id = ? AND aktiv = 1",
+            "SELECT COUNT(*) FROM projects WHERE user_sub = ? AND aktiv = 1",
             Long::class.java,
-            userId
+            userSub
         ) ?: 0
 
     fun update(project: Project): Boolean =
         jdbcTemplate.update(
-            "UPDATE projects SET navn = ?, beskrivelse = ?, endret_dato = ? WHERE project_id = ? AND user_id = ?",
-            project.navn, project.beskrivelse, project.endretDato, project.projectId, project.userId
+            "UPDATE projects SET navn = ?, beskrivelse = ?, endret_dato = ? WHERE project_id = ? AND user_sub = ?",
+            project.navn, project.beskrivelse, project.endretDato, project.projectId, project.userSub
         ) > 0
 
-    fun softDelete(projectId: Long, userId: Long): Boolean =
+    fun softDelete(projectId: Long, userSub: String): Boolean =
         jdbcTemplate.update(
-            "UPDATE projects SET aktiv = 0, endret_dato = ? WHERE project_id = ? AND user_id = ?",
-            LocalDateTime.now(), projectId, userId
+            "UPDATE projects SET aktiv = 0, endret_dato = ? WHERE project_id = ? AND user_sub = ?",
+            LocalDateTime.now(), projectId, userSub
         ) > 0
 
     fun existsWithTimeregistrering(projectId: Long): Boolean =

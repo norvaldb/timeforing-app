@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -17,67 +18,67 @@ import org.springframework.web.bind.annotation.*
 class ProjectController(private val projectFacade: ProjectFacade) {
 
     @PostMapping
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     @Operation(summary = "Opprett nytt prosjekt")
     fun createProject(
-        @AuthenticationPrincipal principal: org.springframework.security.core.userdetails.User,
+        @AuthenticationPrincipal principal: Jwt,
         @Valid @RequestBody request: CreateProjectRequest
     ): ResponseEntity<ProjectDto> {
-        val userId = principal.username.toLong() // Assuming username is userId
-        val project = projectFacade.createProject(userId, request)
+        val userSub = principal.claims["sub"] as String
+        val project = projectFacade.createProject(userSub, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(project)
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     @Operation(summary = "Hent alle aktive prosjekter for innlogget bruker")
     fun listProjects(
-        @AuthenticationPrincipal principal: org.springframework.security.core.userdetails.User,
+        @AuthenticationPrincipal principal: Jwt,
         @RequestParam(defaultValue = "1") page: Int,
         @RequestParam(defaultValue = "20") pageSize: Int,
         @RequestParam(defaultValue = "navn") sort: String,
         @RequestParam(defaultValue = "true") asc: Boolean
     ): ResponseEntity<ProjectListResponse> {
-        val userId = principal.username.toLong()
-        val result = projectFacade.listProjects(userId, page, pageSize, sort, asc)
+        val userSub = principal.claims["sub"] as String
+        val result = projectFacade.listProjects(userSub, page, pageSize, sort, asc)
         return ResponseEntity.ok(result)
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     @Operation(summary = "Hent detaljer for et spesifikt prosjekt")
     fun getProject(
-        @AuthenticationPrincipal principal: org.springframework.security.core.userdetails.User,
+        @AuthenticationPrincipal principal: Jwt,
         @PathVariable id: Long
     ): ResponseEntity<ProjectDto> {
-        val userId = principal.username.toLong()
-        val project = projectFacade.getProject(userId, id)
+        val userSub = principal.claims["sub"] as String
+        val project = projectFacade.getProject(userSub, id)
             ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(project)
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     @Operation(summary = "Oppdater prosjekt informasjon")
     fun updateProject(
-        @AuthenticationPrincipal principal: org.springframework.security.core.userdetails.User,
+        @AuthenticationPrincipal principal: Jwt,
         @PathVariable id: Long,
         @Valid @RequestBody request: UpdateProjectRequest
     ): ResponseEntity<ProjectDto> {
-        val userId = principal.username.toLong()
-        val updated = projectFacade.updateProject(userId, id, request)
+        val userSub = principal.claims["sub"] as String
+        val updated = projectFacade.updateProject(userSub, id, request)
         return ResponseEntity.ok(updated)
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     @Operation(summary = "Soft delete av prosjekt")
     fun deleteProject(
-        @AuthenticationPrincipal principal: org.springframework.security.core.userdetails.User,
+        @AuthenticationPrincipal principal: Jwt,
         @PathVariable id: Long
     ): ResponseEntity<Void> {
-        val userId = principal.username.toLong()
-        projectFacade.deleteProject(userId, id)
+        val userSub = principal.claims["sub"] as String
+        projectFacade.deleteProject(userSub, id)
         return ResponseEntity.noContent().build()
     }
 }

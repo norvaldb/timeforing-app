@@ -205,6 +205,24 @@ Once the backend is running, access the interactive API documentation:
 
 - **Swagger UI**: http://localhost:8080/swagger-ui.html
 - **OpenAPI JSON**: http://localhost:8080/v3/api-docs
+
+Runtime-generated OpenAPI JSON (for frontend use)
+
+- The build also supports exporting the runtime OpenAPI JSON to a file for the frontend to consume: `target/generated-openapi/api.json`.
+- To generate the file as part of the build, run:
+
+```bash
+# Builds the jar, starts the app briefly, fetches /v3/api-docs and writes the file
+mvn -DskipTests -Pexport-openapi verify
+```
+
+Or run the helper script directly (requires a packaged jar or use after `mvn -DskipTests package`):
+
+```bash
+./scripts/export-openapi.sh
+```
+
+Frontend developers should use `target/generated-openapi/api.json` as the contract when implementing API calls.
 ## 🗄️ Database Setup
 
 ### Create Database Schema

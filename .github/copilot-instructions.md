@@ -28,6 +28,8 @@
 - **Norwegian Validation**: Mobile numbers (+47), email, form validation
 - **Responsive Design**: Mobile-first with dark mode support
 
+Frontend should use the generated OpenAPI spec at `target/generated-openapi/api.json` as the reference when implementing API calls.
+
 ## Key Standards
 src/main/kotlin/
 ├── feature/        # Features of the api

@@ -194,6 +194,26 @@ npm run dev
 - **API Documentation**: http://localhost:8080/swagger-ui.html  
 - **API Health**: http://localhost:8080/actuator/health
 
+### Exporting OpenAPI JSON for the frontend
+
+The project can export the runtime OpenAPI JSON to `target/generated-openapi/api.json` so frontend code can use a stable contract for implementing API calls.
+
+Option A - build & export in one step:
+
+```bash
+# Builds the jar, starts the app briefly, fetches /v3/api-docs and writes the file
+mvn -DskipTests -Pexport-openapi verify
+```
+
+Option B - run the helper script after packaging:
+
+```bash
+#mvn -DskipTests package
+./scripts/export-openapi.sh
+```
+
+The exported file is intended for local frontend development; add it to your editor or import it into API generation tools as needed.
+
 ### 4. Test the Complete Setup
 ```bash
 # Test API registration endpoint

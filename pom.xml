@@ -421,6 +421,8 @@
                 </executions>
             </plugin>
 
+            <!-- OpenAPI generation is handled by scripts/export-openapi.sh via profile 'export-openapi' -->
+
             <!-- Allure Maven plugin for generating report (run manually: mvn allure:report or mvn allure:serve) -->
             <plugin>
                 <groupId>io.qameta.allure</groupId>
@@ -445,5 +447,35 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>export-openapi</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>export-openapi-json</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/scripts/export-openapi.sh</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

@@ -18,10 +18,20 @@ class TestSecurityConfig {
                 token.contains("different-sub") -> "different-user-sub"
                 else -> "test-user-sub"
             }
+            val name = when {
+                token.contains("different-sub") -> "Different User"
+                else -> "Ola Nordmann"
+            }
+            val email = when {
+                token.contains("different-sub") -> "different@example.com"
+                else -> "ola.nordmann@example.com"
+            }
             Jwt.withTokenValue(token)
                 .header("alg", "none")
                 .claim("sub", userSub)
                 .claim("scope", "USER") // Add scope claim for authorities
+                .claim("name", name)
+                .claim("email", email)
                 .build()
         }
     }

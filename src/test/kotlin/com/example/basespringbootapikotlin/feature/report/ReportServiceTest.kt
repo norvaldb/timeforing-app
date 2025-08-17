@@ -20,7 +20,7 @@ class ReportServiceTest {
         )
         every { repository.findAllByUserSub("test-user-sub", any(), any()) } returns entries
 
-        val bytes = service.generateExcel("test-user-sub", null, null, null)
+    val bytes = service.generateExcel("test-user-sub", "Test User", "test@example.com", null, null, null)
         assertTrue(bytes.isNotEmpty())
     }
 }

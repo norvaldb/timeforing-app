@@ -1,28 +1,104 @@
 import { useEffect, useState } from 'react';
 import projectService from '../../services/projectService';
+import { useNotification } from '@/components/notifications/NotificationToast';
 import type { ProjectDto } from '../../types/project';
+import ProjectForm, { ProjectFormData } from '../../components/forms/ProjectForm';
+import { Button } from '../../components/ui/Button';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 export const Projects = () => {
   const [projects, setProjects] = useState<ProjectDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<ProjectDto | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [toDelete, setToDelete] = useState<ProjectDto | null>(null);
+
+  const fetch = async () => {
+    setLoading(true);
+    try {
+      const data = await projectService.getAll();
+      setProjects(data);
+    } catch (err) {
+      // TODO: toast error
+      console.error('Failed to load projects', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
-    projectService.getAll()
-      .then((data) => {
-        if (mounted) setProjects(data);
-      })
-      .catch(() => {
-        // TODO: show notification
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-
+    if (mounted) fetch();
     return () => {
       mounted = false;
     };
   }, []);
+
+  const openCreate = () => {
+    setEditing(null);
+    setShowForm(true);
+  };
+
+  const openEdit = (p: ProjectDto) => {
+    setEditing(p);
+    setShowForm(true);
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditing(null);
+  };
+
+  const handleSubmit = async (data: ProjectFormData) => {
+    setSubmitting(true);
+    try {
+      if (editing) {
+        const updated = await projectService.update(editing.id, data as any);
+        setProjects((prev: ProjectDto[]) => prev.map((x) => (x.id === updated.id ? updated : x)));
+        notify.success('lagret');
+      } else {
+        const created = await projectService.create(data as any);
+        setProjects((prev: ProjectDto[]) => [created, ...prev]);
+        notify.success('lagret');
+      }
+      setShowForm(false);
+      setEditing(null);
+    } catch (err) {
+      console.error('Save error', err);
+      notify.customError('Noe gikk galt, prøv igjen');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (p: ProjectDto) => {
+    setToDelete(p);
+    setConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    setConfirmOpen(false);
+    try {
+      await projectService.remove(toDelete.id);
+      setProjects((prev) => prev.filter((x) => x.id !== toDelete.id));
+      notify.success('slettet');
+    } catch (err) {
+      console.error('Delete failed', err);
+      notify.customError('Noe gikk galt, prøv igjen');
+    } finally {
+      setToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setConfirmOpen(false);
+    setToDelete(null);
+  };
+
+  const notify = useNotification();
 
   return (
     <div className="space-y-8">
@@ -31,12 +107,32 @@ export const Projects = () => {
           <h1 className="text-3xl font-bold tracking-tight">Prosjekter</h1>
           <p className="text-muted-foreground">Administrer dine prosjekter</p>
         </div>
-        <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors">
-          Legg til prosjekt
-        </button>
+        <Button onClick={openCreate}>Legg til prosjekt</Button>
       </div>
 
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Slett prosjekt"
+        description={toDelete ? `Er du sikker på at du vil slette ${toDelete.navn}?` : ''}
+        confirmLabel="Slett"
+        cancelLabel="Avbryt"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+
       <div className="bg-card rounded-lg border p-6">
+        {showForm && (
+          <div className="mb-6 p-4 border rounded-md bg-background">
+            <h2 className="text-lg font-medium mb-3">{editing ? 'Rediger prosjekt' : 'Nytt prosjekt'}</h2>
+            <ProjectForm
+              initial={(editing ?? undefined) as any}
+              onCancel={handleCancel}
+              onSubmit={handleSubmit}
+              isSubmitting={submitting}
+            />
+          </div>
+        )}
+
         {loading ? (
           <p className="text-muted-foreground text-center py-8">Laster prosjekter...</p>
         ) : projects.length === 0 ? (
@@ -50,8 +146,8 @@ export const Projects = () => {
                   {p.beskrivelse && <div className="text-sm text-muted-foreground">{p.beskrivelse}</div>}
                 </div>
                 <div className="space-x-2">
-                  <button className="text-sm text-primary">Rediger</button>
-                  <button className="text-sm text-destructive">Slett</button>
+                  <button className="text-sm text-primary" onClick={() => openEdit(p)}>Rediger</button>
+                  <button className="text-sm text-destructive" onClick={() => handleDelete(p)}>Slett</button>
                 </div>
               </li>
             ))}

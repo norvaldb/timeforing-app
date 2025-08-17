@@ -52,91 +52,58 @@ src/main/kotlin/com/example/basespringbootapikotlin/feature/user/
     UserFacade.kt
     UserFacadeImpl.kt
     UserRepository.kt
-    User.kt
     UserDto.kt
-    UserProfileDtos.kt
-    RegisterUserRequest.kt
-    ...
-```
-
-Test code follows the same structure under `src/test/kotlin/com/example/basespringbootapikotlin/feature/`.
-
 **Note:** All package declarations and imports use `com.example.basespringbootapikotlin.feature.<feature>`.
 
-### Kotlin & Spring Conventions
-- **Naming**: PascalCase classes, camelCase functions, UPPER_SNAKE_CASE constants
-- **Injection**: Constructor injection, program against interfaces
-- **Kotlin**: data classes for DTOs/entities, null safety (`?`, `?.`), prefer `val`
-- **Controllers**: `@RestController`, return `ResponseEntity<T>`, use `@Valid`
-- **Security**: `@PreAuthorize` method-level, JWT validation, RBAC
-
-### Testing & Documentation
-- **Testing**: Kotest + MockK, `@SpringBootTest` for integration, TestContainers
+    ```
 - **API Docs**: OpenAPI 3.0, comprehensive `@Operation/@Schema` annotations
+        ├── project/   # All project-related code: controller, facade, repository, model, dto, etc.
+        └── ...        # (Add more features as needed)
+    ```
+
+    Each feature folder contains all files for that feature (no subpackages per layer). Example:
+    ```
 - **DB**: Oracle with Flyway migrations, HikariCP connection pooling
+        ProjectController.kt
+        ProjectFacade.kt
+        ProjectFacadeImpl.kt
+        ProjectRepository.kt
+        Project.kt
+        ProjectDto.kt
+        ...
+    ```
 
 ## Essential Patterns
 
-### Controller Example
-```kotlin
-@RestController
-@RequestMapping("/api/users")
-@Tag(name = "User Management")
-@PreAuthorize("hasRole('USER')")
-class UserController(private val userFacade: UserFacade) {
-    
-    @GetMapping("/{id}")
-    @Operation(summary = "Get user by ID")
-    @PreAuthorize("hasRole('USER') and (#id == authentication.principal.id or hasRole('ADMIN'))")
-    fun getUser(@PathVariable id: Long): ResponseEntity<UserDto> =
-        userFacade.findById(id)?.let { ResponseEntity.ok(it) } 
-            ?: ResponseEntity.notFound().build()
-    
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    fun createUser(@Valid @RequestBody request: CreateUserRequest): ResponseEntity<UserDto> {
-        val user = userFacade.createUser(request)
-        return ResponseEntity.status(HttpStatus.CREATED).body(user)
-    }
-}
-```
 
-### Facade Example
-```kotlin
-@Service
-@Transactional
-class UserFacadeImpl(
-    private val userRepository: UserRepository,
-    private val auditRepository: AuditRepository
-) : UserFacade {
-    
-    override fun createUser(request: CreateUserRequest): UserDto {
-        val user = userRepository.save(User(email = request.email))
-        auditRepository.logUserCreation(user.id)
-        return user.toDto()
-    }
-}
-```
+// ...existing code...
 
 ### Repository Example
 ```kotlin
 @Repository
-class UserRepository(private val jdbcTemplate: JdbcTemplate) {
-    
-    fun findById(id: Long): User? = try {
+class ProjectRepository(private val jdbcTemplate: JdbcTemplate) {
+    // All queries are scoped by userSub (from JWT claims)
+    fun findById(projectId: Long, userSub: String): Project? = try {
         jdbcTemplate.queryForObject(
-            "SELECT user_id, email FROM users WHERE user_id = ?",
-            { rs, _ -> User(rs.getLong("user_id"), rs.getString("email")) },
-            id
+            "SELECT project_id, navn, beskrivelse FROM projects WHERE project_id = ? AND user_sub = ? AND aktiv = 1",
+            { rs, _ ->
+                Project(
+                    id = rs.getLong("project_id"),
+                    navn = rs.getString("navn"),
+                    beskrivelse = rs.getString("beskrivelse"),
+                    userSub = userSub
+                )
+            },
+            projectId, userSub
         )
     } catch (e: EmptyResultDataAccessException) { null }
-    
-    fun save(user: User): User {
+
+    fun save(project: Project): Project {
         val id = jdbcTemplate.queryForObject(
-            "INSERT INTO users (email) VALUES (?) RETURNING user_id",
-            Long::class.java, user.email
+            "INSERT INTO projects (navn, beskrivelse, user_sub) VALUES (?, ?, ?) RETURNING project_id",
+            Long::class.java, project.navn, project.beskrivelse, project.userSub
         )
-        return user.copy(id = id ?: 0)
+        return project.copy(id = id ?: 0)
     }
 }
 ```
@@ -183,7 +150,7 @@ cd timeforing-app-gui && npm run build  # Frontend build
 
 ### Database Production Setup - ✅ READY
 - **Connection**: `jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=oracledb)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XEPDB1)))`
-- **User**: `timeforing_user` with full privileges (auto-created)
+- **User**: `timeforing_user` (for application DB access; not for user management)
 - **Password**: `TimeTrack123` (configured via scripts)
-- **Schema**: Norwegian user tables with sequence-based ID generation
+- **Schema**: Only project and time entry tables remain; all user data is provided via JWT claims (stateless, no user table)
 }

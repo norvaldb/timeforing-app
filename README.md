@@ -37,6 +37,9 @@ cd timeforing-app-gui && npm run dev
 
 **Timeforing App** is a time tracking solution designed for individuals and teams to efficiently track work hours, manage projects, and generate insightful reports. The application follows modern development practices with a monorepo structure containing both backend and frontend components.
 
+**User management is now fully stateless and claims-driven:**
+- All user identification, profile data, and roles are extracted from JWT claims (no user CRUD endpoints or user table in the backend).
+
 ## 🏗️ Repository Structure
 
 ```

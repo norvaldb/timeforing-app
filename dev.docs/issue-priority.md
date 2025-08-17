@@ -2,6 +2,7 @@
 
 ## 1. Implement stateless, claim-driven authentication model (JWT-only, no user table)
 **Issue #23**
+- ✅ Complete as of 2025-08-17: Backend is now fully stateless and claim-driven, with all user data and roles extracted from JWT claims. User table and dependencies removed from code, tests, and migrations. All tests pass. Production-ready.
 - Refactor backend to remove user table and use JWT claims for all user profile data and roles.
 - Update mock token generator, documentation, and Copilot instructions.
 - This is foundational for all future backend and API work.

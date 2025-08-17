@@ -1,3 +1,6 @@
+# Mock JWT Authentication System: Usage Guide (Claims-Driven Model)
+
+This guide explains how to use the mock JWT authentication system for local development and integration testing in a stateless, claims-driven backend.
 # Mock JWT Authentication System: Usage Guide
 
 This guide explains how to use the mock JWT authentication system for local development and integration testing.
@@ -6,6 +9,7 @@ This guide explains how to use the mock JWT authentication system for local deve
 - The mock JWT system is enabled in `dev`, `local`, and `test` Spring profiles.
 - It provides a REST endpoint to issue JWT tokens for any user/roles, valid for 12 hours.
 - No external OAuth2/JWT provider is required for local development or CI.
+- **All user identification and roles are provided as JWT claims. No user table or user CRUD exists in the backend.**
 
 ## Endpoint
 - **URL:** `POST /api/mock-auth/token`
@@ -14,18 +18,20 @@ This guide explains how to use the mock JWT authentication system for local deve
 ### Request Body
 ```json
 {
-  "username": "your-username",
+  "sub": "user-uuid-123",
+  "email": "devuser@example.com",
   "roles": ["USER", "ADMIN"]
 }
 ```
-- `username`: The user identifier for the token (string, required)
+- `sub`: The unique user identifier for the token (string, required)
+- `email`: The user's email (optional, for profile display)
 - `roles`: List of roles to include in the token (optional, defaults to `["USER"]`)
 
 ### Example cURL
 ```
 curl -X POST http://localhost:8080/api/mock-auth/token \
   -H "Content-Type: application/json" \
-  -d '{"username": "devuser", "roles": ["USER", "ADMIN"]}'
+  -d '{"sub": "user-uuid-123", "email": "devuser@example.com", "roles": ["USER", "ADMIN"]}'
 ```
 
 ### Response
@@ -41,7 +47,6 @@ curl -X POST http://localhost:8080/api/mock-auth/token \
 ```
 Authorization: Bearer <JWT_TOKEN_STRING>
 ```
-- The backend will accept this token for all secured endpoints in local/dev/test.
 
 ## Configuration
 - The signing secret is generated in code and is not configurable via `application.yml` or environment variables.

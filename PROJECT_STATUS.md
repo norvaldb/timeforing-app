@@ -15,10 +15,7 @@ Complete time tracking application with Kotlin Spring Boot backend and React Typ
 - **Deployment**: Docker multi-stage builds with automated scripts
 
 **Key Endpoints Implemented:**
-- `POST /api/users/register` - User registration with Norwegian validation
-- `GET /api/users/profile` - User profile retrieval (secured)
-- `PUT /api/users/profile` - User profile updates (secured)
-- `GET /api/users/email-available` - Email availability check (secured)
+- All user identification and profile data is now extracted from JWT claims (stateless, no user CRUD endpoints)
 - `GET /actuator/health` - Health monitoring endpoint
 
 ### ✅ Frontend Application (100% Complete)

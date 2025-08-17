@@ -11,6 +11,12 @@
 
 ## Implemented Features
 
+## Workflow: GitHub issues (important)
+
+- Always read the GitHub issue before starting implementation. The issue description, acceptance criteria, labels, linked designs, and comments contain essential context. Do not begin coding until you've reviewed the issue and confirmed you understand the scope.
+- When you start work, add a short note in the issue (or a comment) indicating you are working on it and which branch you'll use (e.g., `feature/issue-13`).
+- Reference the issue number in commits and PR titles (e.g., `feat(issue-13): ...`) and include a brief note in the PR describing how the changes address the acceptance criteria.
+
 ### ✅ Backend API
 - **Norwegian Localization**: All error messages and validation in Norwegian
 - **Oracle Database**: Containerized Oracle XE with sequence-based ID generation
@@ -28,7 +34,29 @@
 - **Norwegian Validation**: Mobile numbers (+47), email, form validation
 - **Responsive Design**: Mobile-first with dark mode support
 
-Frontend should use the generated OpenAPI spec at `target/generated-openapi/api.json` as the reference when implementing API calls.
+Frontend OpenAPI contract (how to use `api.json`)
+
+- Location: the runtime-generated OpenAPI JSON is written to `target/generated-openapi/api.json` in the repository after running the export step.
+- Generate it locally (recommended when working on React issues):
+
+```bash
+# build + export in one step (builds jar, boots app briefly, fetches /v3/api-docs)
+mvn -DskipTests -Pexport-openapi verify
+
+# or: build first and run the helper script
+mvn -DskipTests package
+./scripts/export-openapi.sh
+```
+
+- Usage guidance for React work:
+    - When you pick up a frontend issue that requires API calls/contract knowledge, first update to the latest `main` and run the export command to get a fresh `target/generated-openapi/api.json`.
+    - Use this `api.json` as the single source of truth for generating TypeScript clients, validating request/response shapes, and writing mocks for component/integration tests.
+    - If you change frontend code that depends on an API change, include a short note in the PR describing which server endpoints or DTOs the change depends on and whether `api.json` was regenerated.
+    - If a backend change modifies the OpenAPI contract, ensure the maintainer of the backend runs the export and either attaches the generated `api.json` to the PR or updates the CI artifact so frontend CI can consume the updated contract.
+
+- CI recommendation (optional): run `mvn -Pexport-openapi verify` in CI and publish `target/generated-openapi/api.json` as a workflow/artifact so frontend pipelines can fetch the canonical contract.
+
+This makes `target/generated-openapi/api.json` the reliable contract whenever you implement React issues that call the API.
 
 ## Key Standards
 src/main/kotlin/

@@ -138,7 +138,7 @@ jobs:
     
     - name: Upload to GitHub Pages
       if: github.ref == 'refs/heads/main' && steps.setup-pages.outcome == 'success'
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v4
       with:
         path: gh-pages
       continue-on-error: true

@@ -47,11 +47,11 @@
 
     <properties>
         <java.version>21</java.version>
-        <kotlin.version>1.9.25</kotlin.version>
-        <springdoc.version>2.7.0</springdoc.version>
-        <oracle.version>23.4.0.24.05</oracle.version>
-        <flyway.version>10.21.0</flyway.version>
-        <kotest.version>5.9.1</kotest.version>
+        <kotlin.version>2.2.20-RC2</kotlin.version>
+        <springdoc.version>3.0.0-M1</springdoc.version>
+        <oracle.version>23.9.0.25.07</oracle.version>
+        <flyway.version>11.12.0</flyway.version>
+        <kotest.version>6.0.3</kotest.version>
         <mockk.version>1.14.5</mockk.version>
         <testcontainers.version>1.21.3</testcontainers.version>
         <allure.maven.version>2.15.2</allure.maven.version>
@@ -66,30 +66,30 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
-            <version>6.0.0</version>
+            <version>6.1.0</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.12.7</version>
+            <version>0.13.0</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.12.7</version>
+            <version>0.13.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.12.7</version>
+            <version>0.13.0</version>
             <scope>runtime</scope>
         </dependency>
         <!-- Validation API (for @Valid, @NotBlank) -->
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
-            <version>3.0.2</version>
+            <version>3.1.1</version>
         </dependency>
         <!-- Spring Boot Starters -->
         <dependency>
@@ -111,7 +111,7 @@
         <dependency>
             <groupId>com.nimbusds</groupId>
             <artifactId>nimbus-jose-jwt</artifactId>
-            <version>10.4.1</version>
+            <version>10.5</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -169,7 +169,7 @@
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>swagger-ui</artifactId>
-            <version>5.27.1</version>
+            <version>5.28.1</version>
         </dependency>
 
         <!-- Utilities -->
@@ -270,7 +270,7 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.3</version>
+            <version>5.4.1</version>
         </dependency>
     </dependencies>
 
